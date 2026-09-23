@@ -21,7 +21,7 @@ export interface ResumeProfile {
   experienceSummary: string;
 }
 
-export type PostingSource = "link" | "paste" | "pdf";
+export type PostingSource = "link" | "paste" | "pdf" | "image";
 
 export interface JobPosting {
   id: string;

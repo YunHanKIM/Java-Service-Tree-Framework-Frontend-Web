@@ -23,8 +23,18 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return data as T;
 }
 
+async function postFile<T>(url: string, file: File, fallbackError: string): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(url, { method: "POST", body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error ?? fallbackError, res.status, data.code);
+  return data as T;
+}
+
 export const api = {
-  importUrl: (url: string) => postJson<{ text: string; originalUrl: string }>("/api/import-url", { url }),
+  importUrl: (url: string) =>
+    postJson<{ text: string; originalUrl: string; method: "fetch" | "browser" }>("/api/import-url", { url }),
   extractPosting: (source: string, text: string) => postJson<ExtractedPosting>("/api/ai/extract", { source, text }),
   compareResume: (posting: JobPosting, resume: ResumeProfile) =>
     postJson<AnalysisResult>("/api/ai/compare", { posting, resume }),
@@ -32,12 +42,16 @@ export const api = {
   generateFeedback: (question: string, answer: string) =>
     postJson<{ feedback: string }>("/api/ai/feedback", { question, answer }),
 
-  async parsePdf(file: File): Promise<{ text: string; fileName: string }> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/parse-pdf", { method: "POST", body: formData });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new ApiError(data.error ?? "PDF 처리에 실패했습니다.", res.status, data.code);
-    return data;
-  },
+  parsePdf: (file: File) =>
+    postFile<{ text: string; fileName: string; method: "text" | "vision" | "ocr"; notice?: string }>(
+      "/api/parse-pdf",
+      file,
+      "PDF 처리에 실패했습니다."
+    ),
+  imageToText: (file: File) =>
+    postFile<{ text: string; method: "vision" | "ocr"; notice?: string }>(
+      "/api/image-to-text",
+      file,
+      "이미지 처리에 실패했습니다."
+    ),
 };

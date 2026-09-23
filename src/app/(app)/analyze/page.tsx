@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AlertCircle, FileText, Lightbulb, Link2, Search, Settings, Sparkles, Upload } from "lucide-react";
+import { AlertCircle, FileText, ImageIcon, Lightbulb, Link2, Search, Settings, Sparkles, Upload, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,7 @@ import { applicationsStore, postingsStore, resumeStore } from "@/lib/client/stor
 import { api, ApiError } from "@/lib/client/api";
 import type { Application, ExtractedPosting, JobPosting, PostingSource, ResumeProfile, Stage } from "@/types/domain";
 
-type Tab = "paste" | "link" | "pdf";
+type Tab = PostingSource;
 type Phase = "idle" | "loading" | "form" | "result";
 
 function LoadingCard({ message }: { message: string }) {
@@ -47,7 +47,9 @@ function AnalyzePageContent() {
   const [pasteText, setPasteText] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [pendingOriginalUrl, setPendingOriginalUrl] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<PostingSource>("paste");
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -80,6 +82,26 @@ function AnalyzePageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 페이지 어디서든 Ctrl+V로 캡처 이미지를 붙여넣으면 이미지 탭으로 받는다 (텍스트 붙여넣기는 그대로 둔다)
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith("image/"));
+      if (!file) return;
+      e.preventDefault();
+      setImageFile(file);
+      setActiveTab("image");
+      setNotice(null);
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
+
+  const imagePreview = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile]);
+  useEffect(() => {
+    if (!imagePreview) return;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
+
   async function runComparison(target: JobPosting, resumeProfile: ResumeProfile) {
     setComparing(true);
     setCompareError(null);
@@ -97,72 +119,21 @@ function AnalyzePageContent() {
     }
   }
 
-  async function handleAnalyzeClick() {
-    setNotice(null);
-    setApiKeyMissing(false);
-
-    if (activeTab === "link") {
-      if (!linkUrl.trim()) {
-        setNotice("채용공고 URL을 입력해주세요.");
-        return;
-      }
-      setPhase("loading");
-      setLoadingMessage("링크를 불러오고 있어요...");
-      try {
-        const { text, originalUrl } = await api.importUrl(linkUrl.trim());
-        setLoadingMessage("공고 내용을 분석하고 있어요...");
-        const ex = await api.extractPosting("link", text);
-        setPendingOriginalUrl(originalUrl);
-        setExtracted(ex);
-        setPhase("form");
-      } catch (err) {
-        setPhase("idle");
-        if (err instanceof ApiError && err.code === "NO_API_KEY") {
-          setApiKeyMissing(true);
-          return;
-        }
-        const message = err instanceof Error ? err.message : "링크를 가져오지 못했어요.";
-        setNotice(message);
-        setActiveTab("paste");
-      }
-      return;
-    }
-
-    if (activeTab === "pdf") {
-      if (!pdfFile) {
-        setNotice("분석할 PDF 파일을 선택해주세요.");
-        return;
-      }
-      setPhase("loading");
-      setLoadingMessage("PDF에서 텍스트를 추출하고 있어요...");
-      try {
-        const { text } = await api.parsePdf(pdfFile);
-        setLoadingMessage("공고 내용을 분석하고 있어요...");
-        const ex = await api.extractPosting("pdf", text);
-        setPendingOriginalUrl(null);
-        setExtracted(ex);
-        setPhase("form");
-      } catch (err) {
-        setPhase("idle");
-        if (err instanceof ApiError && err.code === "NO_API_KEY") {
-          setApiKeyMissing(true);
-          return;
-        }
-        setNotice(err instanceof Error ? err.message : "PDF 처리에 실패했어요.");
-      }
-      return;
-    }
-
-    // paste
-    if (!pasteText.trim()) {
-      setNotice("공고 본문을 붙여넣어주세요.");
-      return;
-    }
+  /** 입력 방식마다 "원문 텍스트 얻기"만 다르고, 이후 AI 추출 → 확인·수정 폼 흐름은 같다 */
+  async function runExtraction(
+    source: PostingSource,
+    firstMessage: string,
+    getText: () => Promise<{ text: string; originalUrl?: string; notice?: string }>
+  ) {
     setPhase("loading");
-    setLoadingMessage("공고 내용을 분석하고 있어요...");
+    setLoadingMessage(firstMessage);
     try {
-      const ex = await api.extractPosting("paste", pasteText.trim());
-      setPendingOriginalUrl(null);
+      const { text, originalUrl, notice: sourceNotice } = await getText();
+      if (sourceNotice) toast.info(sourceNotice);
+      setLoadingMessage("공고 내용을 분석하고 있어요...");
+      const ex = await api.extractPosting(source, text);
+      setPendingOriginalUrl(originalUrl ?? null);
+      setPendingSource(source);
       setExtracted(ex);
       setPhase("form");
     } catch (err) {
@@ -172,12 +143,38 @@ function AnalyzePageContent() {
         return;
       }
       setNotice(err instanceof Error ? err.message : "분석에 실패했어요.");
+      // 크롤링이 막힌 사이트는 화면을 캡처해서 이미지로 넣는 편이 가장 빠르다
+      if (source === "link" && err instanceof ApiError && err.code !== "UNSAFE_URL") setActiveTab("image");
     }
+  }
+
+  function handleAnalyzeClick() {
+    setNotice(null);
+    setApiKeyMissing(false);
+
+    if (activeTab === "link") {
+      if (!linkUrl.trim()) return setNotice("채용공고 URL을 입력해주세요.");
+      return runExtraction("link", "링크를 불러오고 있어요... (JS로 그리는 사이트는 브라우저로 한 번 더 읽어요)", () =>
+        api.importUrl(linkUrl.trim())
+      );
+    }
+    if (activeTab === "pdf") {
+      if (!pdfFile) return setNotice("분석할 PDF 파일을 선택해주세요.");
+      return runExtraction("pdf", "PDF에서 텍스트를 추출하고 있어요... (스캔 PDF는 글자 인식에 시간이 걸려요)", () =>
+        api.parsePdf(pdfFile)
+      );
+    }
+    if (activeTab === "image") {
+      if (!imageFile) return setNotice("공고 캡처 이미지를 붙여넣거나 선택해주세요.");
+      return runExtraction("image", "이미지에서 글자를 읽고 있어요...", () => api.imageToText(imageFile));
+    }
+    if (!pasteText.trim()) return setNotice("공고 본문을 붙여넣어주세요.");
+    return runExtraction("paste", "공고 내용을 분석하고 있어요...", async () => ({ text: pasteText.trim() }));
   }
 
   function handleExtractionSubmit(data: ExtractedPosting) {
     const created = postingsStore.create({
-      source: activeTab as PostingSource,
+      source: pendingSource,
       ...data,
       originalUrl: pendingOriginalUrl,
     });
@@ -216,13 +213,16 @@ function AnalyzePageContent() {
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
                 <TabsList className="w-full">
                   <TabsTrigger value="paste">
-                    <FileText /> 내용 붙여넣기
+                    <FileText /> 붙여넣기
                   </TabsTrigger>
                   <TabsTrigger value="link">
-                    <Link2 /> 링크 입력
+                    <Link2 /> 링크
+                  </TabsTrigger>
+                  <TabsTrigger value="image">
+                    <ImageIcon /> 이미지
                   </TabsTrigger>
                   <TabsTrigger value="pdf">
-                    <Upload /> PDF 업로드
+                    <Upload /> PDF
                   </TabsTrigger>
                 </TabsList>
 
@@ -262,8 +262,51 @@ function AnalyzePageContent() {
                     onChange={(e) => setLinkUrl(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    서버가 실제로 페이지를 가져와서 분석해요. 로그인이 필요하거나 JavaScript로 렌더링되는
-                    사이트는 실패할 수 있어요 — 그럴 땐 본문을 복사해서 붙여넣기로 전환해주세요.
+                    서버가 페이지를 가져오고, JavaScript로 그리는 사이트(원티드·사람인 등)는 헤드리스 브라우저로 한 번
+                    더 읽어요. 로그인이 필요한 페이지는 실패할 수 있어요 — 그럴 땐 화면을 캡처해서 이미지로 넣어주세요.
+                  </p>
+                </TabsContent>
+                <TabsContent value="image" className="mt-3 space-y-3">
+                  {imagePreview ? (
+                    <div className="relative overflow-hidden rounded-lg border">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- 로컬 blob 미리보기라 next/image 최적화 대상 아님 */}
+                      <img src={imagePreview} alt="붙여넣은 공고 이미지" className="max-h-64 w-full object-contain" />
+                      <Button
+                        size="icon-sm"
+                        variant="secondary"
+                        className="absolute top-2 right-2"
+                        aria-label="이미지 지우기"
+                        onClick={() => setImageFile(null)}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label
+                      className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground hover:bg-muted/50"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith("image/"));
+                        if (file) setImageFile(file);
+                      }}
+                    >
+                      <ImageIcon className="size-6" />
+                      <span>
+                        공고 화면을 캡처한 뒤 <kbd className="rounded border px-1 text-xs">Ctrl</kbd>+
+                        <kbd className="rounded border px-1 text-xs">V</kbd>로 붙여넣거나, 여기로 끌어오거나, 클릭해서
+                        선택하세요.
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="sr-only"
+                        onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    설정에서 로컬 비전 모델을 지정하면 그 모델이, 아니면 내장 OCR이 글자를 읽어요. (최대 8MB)
                   </p>
                 </TabsContent>
                 <TabsContent value="pdf" className="mt-3 space-y-3">
@@ -273,7 +316,9 @@ function AnalyzePageContent() {
                       {pdfFile.name} ({(pdfFile.size / (1024 * 1024)).toFixed(1)} MB)
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">PDF 파일은 최대 10MB까지 업로드할 수 있어요.</p>
+                  <p className="text-xs text-muted-foreground">
+                    PDF 파일은 최대 10MB까지 업로드할 수 있어요. 스캔 PDF는 앞 3페이지를 글자 인식으로 읽어요.
+                  </p>
                 </TabsContent>
 
                 <Button className="mt-4 w-full" onClick={handleAnalyzeClick} disabled={phase === "loading"}>

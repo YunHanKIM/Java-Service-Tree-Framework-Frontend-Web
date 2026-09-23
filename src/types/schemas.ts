@@ -9,7 +9,7 @@ export const resumeProfileSchema = z.object({
 
 export const jobPostingSchema = z.object({
   id: z.string(),
-  source: z.enum(["link", "paste", "pdf"]),
+  source: z.enum(["link", "paste", "pdf", "image"]),
   company: z.string(),
   title: z.string(),
   location: z.string(),

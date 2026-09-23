@@ -5,8 +5,13 @@ import { resolveAiAccess } from "@/lib/server/ai-access";
 import { createAiProvider, AiProviderError } from "@/lib/ai";
 
 const bodySchema = z.object({
-  source: z.enum(["link", "paste", "pdf"]),
-  text: z.string().min(1),
+  source: z.enum(["link", "paste", "pdf", "image"]),
+  // 너무 긴 원문은 비용·컨텍스트만 늘린다 — 공고 핵심은 앞부분에 몰려 있다
+  text: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((t) => t.slice(0, 12000)),
 });
 
 export async function POST(req: NextRequest) {

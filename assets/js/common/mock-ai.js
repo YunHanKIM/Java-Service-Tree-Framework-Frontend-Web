@@ -71,7 +71,8 @@ const MockAI = {
         .filter((skill) => resumeSkills.includes(skill))
         .map((skill) => ({
           name: skill,
-          evidence: `내 이력서에서 발췌: "${resume.experienceSummary ? resume.experienceSummary.slice(0, 40) : skill + ' 관련 경험'}..."`
+          postingEvidence: `"${skill} 경험이 있는 분을 찾습니다."`,
+          resumeEvidence: `"${resume.experienceSummary ? resume.experienceSummary.slice(0, 42) : skill + ' 관련 경험이 있습니다.'}..."`
         }));
 
       const missingSkills = allPostingSkills

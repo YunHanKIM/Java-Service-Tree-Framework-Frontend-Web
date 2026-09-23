@@ -49,8 +49,8 @@ const Seed = {
     if (first) {
       Store.postings.saveAnalysis(first.id, {
         matchingSkills: [
-          { name: 'React', evidence: '내 이력서에서 발췌: "React를 사용한 웹 서비스 개발 경험이 있습니다."' },
-          { name: 'TypeScript', evidence: '내 이력서에서 발췌: "TypeScript를 활용하여 컴포넌트를 설계하고 개발했습니다."' }
+          { name: 'React', postingEvidence: '"React 기반의 웹 서비스 개발 경험이 있는 분을 찾습니다."', resumeEvidence: '"React를 사용한 웹 서비스 개발 경험이 있습니다."' },
+          { name: 'TypeScript', postingEvidence: '"TypeScript를 활용한 안정적인 프론트엔드 개발이 필요합니다."', resumeEvidence: '"TypeScript를 활용하여 컴포넌트를 설계하고 개발했습니다."' }
         ],
         missingSkills: [
           { name: 'React Query', reason: '공고에서 발췌: "React Query, 상태 관리 라이브러리 사용 경험이 있으면 좋습니다."', evidence: '이력서에서 관련 경험을 찾지 못했습니다.' }

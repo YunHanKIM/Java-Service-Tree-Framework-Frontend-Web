@@ -43,7 +43,11 @@ export function NotionSettingsCard() {
       setDatabase(data.databaseId ?? "");
       setDatabaseTitle(data.databaseTitle);
       setToken("");
-      toast.success(`Notion 데이터베이스 "${data.databaseTitle}"에 연결했어요.`);
+      toast.success(
+        data.created
+          ? `페이지 안에 "${data.databaseTitle}" 데이터베이스를 만들고 연결했어요.`
+          : `Notion 데이터베이스 "${data.databaseTitle}"에 연결했어요.`
+      );
     } finally {
       setSaving(false);
     }
@@ -72,8 +76,11 @@ export function NotionSettingsCard() {
               </a>
               에서 내부 통합을 만들고 토큰(ntn_...)을 복사해요.
             </li>
-            <li>공고를 모을 데이터베이스(표) 페이지에서 ··· → 연결(Connections) → 방금 만든 통합을 추가해요.</li>
-            <li>데이터베이스 링크를 아래에 붙여넣고 저장하면 필요한 속성(회사·적합도·마감일 등)이 자동으로 추가돼요.</li>
+            <li>공고를 모을 데이터베이스(또는 일반 페이지)에서 ··· → 연결(Connections) → 방금 만든 통합을 추가해요.</li>
+            <li>
+              데이터베이스 링크를 아래에 붙여넣고 저장하면 필요한 속성(회사·적합도·마감일 등)이 자동으로 추가돼요. 일반
+              페이지 링크를 넣으면 그 안의 데이터베이스를 쓰고, 없으면 &quot;지원노트 공고&quot; 데이터베이스를 새로 만들어요.
+            </li>
           </ol>
           <div className="space-y-1.5">
             <Label htmlFor="notionToken">통합 토큰</Label>
@@ -87,7 +94,7 @@ export function NotionSettingsCard() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="notionDatabase">데이터베이스 링크 또는 ID</Label>
+            <Label htmlFor="notionDatabase">데이터베이스 또는 페이지 링크</Label>
             <Input
               id="notionDatabase"
               value={database}

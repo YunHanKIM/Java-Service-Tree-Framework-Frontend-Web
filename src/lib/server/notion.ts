@@ -61,6 +61,10 @@ async function notionFetch<T>(token: string, path: string, method: "GET" | "POST
   if (res.status === 429) {
     throw new NotionError("Notion 요청이 너무 많아요. 잠시 후 다시 시도해주세요.", 429, "NOTION_RATE_LIMITED");
   }
+  // 데이터베이스 자리에 일반 페이지 ID를 넣은 경우 — resolveDatabaseId가 이 코드를 보고 페이지 안에서 DB를 찾는다
+  if (res.status === 400 && /is a page, not a database/i.test(data.message ?? "")) {
+    throw new NotionError("데이터베이스가 아니라 일반 페이지 링크예요.", 400, "NOTION_IS_PAGE");
+  }
   throw new NotionError(`Notion 요청이 실패했어요: ${data.message ?? `HTTP ${res.status}`}`, 502, data.code ?? "NOTION_ERROR");
 }
 
@@ -93,6 +97,38 @@ const MANAGED_PROPERTIES = {
   분석일: { date: {} },
 } as const;
 type ManagedName = keyof typeof MANAGED_PROPERTIES;
+
+/**
+ * 사용자가 넣은 링크가 DB면 그대로, 일반 페이지면 ① 그 페이지 안의 첫 번째 인라인 DB를 쓰고 ② 없으면 그 페이지
+ * 아래에 "지원노트 공고" DB를 새로 만든다 — 노션 사용자는 DB 링크와 페이지 링크를 구분하기 어렵기 때문(실제 문의).
+ */
+export async function resolveDatabaseId(
+  token: string,
+  id: string
+): Promise<{ databaseId: string; created: boolean }> {
+  try {
+    await notionFetch<NotionDatabase>(token, `/databases/${id}`, "GET");
+    return { databaseId: id, created: false };
+  } catch (err) {
+    if (!(err instanceof NotionError) || err.code !== "NOTION_IS_PAGE") throw err;
+  }
+
+  const children = await notionFetch<{ results: { id: string; type: string }[] }>(
+    token,
+    `/blocks/${id}/children?page_size=100`,
+    "GET"
+  );
+  const inline = children.results.find((b) => b.type === "child_database");
+  if (inline) return { databaseId: inline.id.replace(/-/g, ""), created: false };
+
+  const db = await notionFetch<{ id: string }>(token, "/databases", "POST", {
+    parent: { type: "page_id", page_id: id },
+    is_inline: true,
+    title: text("지원노트 공고"),
+    properties: { 공고: { title: {} }, ...MANAGED_PROPERTIES },
+  });
+  return { databaseId: db.id.replace(/-/g, ""), created: true };
+}
 
 /**
  * DB를 조회하고 없는 관리 속성을 추가한다. 설정 저장 시에도 이걸 호출해서, 읽기만 되고 수정 권한이 없는

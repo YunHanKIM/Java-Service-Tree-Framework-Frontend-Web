@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/server/session";
 import { getStoredNotionSettings, saveNotionSettings, toPublicNotionSettings } from "@/lib/server/notion-store";
-import { NotionError, parseDatabaseId, prepareDatabase } from "@/lib/server/notion";
+import { NotionError, parseDatabaseId, prepareDatabase, resolveDatabaseId } from "@/lib/server/notion";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -24,17 +24,19 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "데이터베이스 링크 또는 ID를 입력해주세요." }, { status: 400 });
 
-  const databaseId = parseDatabaseId(parsed.data.database);
-  if (!databaseId) {
+  const inputId = parseDatabaseId(parsed.data.database);
+  if (!inputId) {
     return NextResponse.json({ error: "데이터베이스 링크/ID 형식이 아니에요. 노션 DB 페이지의 링크를 그대로 붙여넣어 주세요." }, { status: 400 });
   }
   const token = parsed.data.token || getStoredNotionSettings(userId).token;
   if (!token) return NextResponse.json({ error: "Notion 통합 토큰을 입력해주세요." }, { status: 400 });
 
   try {
+    // 페이지 링크를 넣었으면 그 안의 DB(없으면 새로 만든 DB)의 ID로 바꿔서 저장한다
+    const { databaseId, created } = await resolveDatabaseId(token, inputId);
     const { title } = await prepareDatabase(token, databaseId);
     const saved = saveNotionSettings(userId, { token: parsed.data.token, databaseId });
-    return NextResponse.json({ ...toPublicNotionSettings(saved), databaseTitle: title });
+    return NextResponse.json({ ...toPublicNotionSettings(saved), databaseTitle: title, created });
   } catch (err) {
     if (err instanceof NotionError) return NextResponse.json({ error: err.message, code: err.code }, { status: 400 });
     return NextResponse.json({ error: "Notion 연결 확인 중 오류가 발생했어요." }, { status: 502 });

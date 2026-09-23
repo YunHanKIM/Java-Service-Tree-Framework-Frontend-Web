@@ -13,8 +13,9 @@
   --color-text-muted: #6b6a66;
   --color-text-faint: #9b9a97;
 
-  --color-accent: #2563eb;
-  --color-accent-soft: #eaf0fe;
+  /* 파란 계열 — dataviz 스킬 검증 팔레트의 sequential/ordinal 램프(step 450)와 통일 */
+  --color-accent: #2a78d6;
+  --color-accent-soft: #eaf1fc;
   --color-success: #16a34a;
   --color-success-soft: #e6f6ea;
   --color-warning: #d97706;
@@ -389,3 +390,79 @@ a { color: var(--color-accent); }
 }
 
 .pipeline-arrow { color: var(--color-text-faint); flex-shrink: 0; }
+
+/* ---------- 대시보드 통계 / 퍼널 차트 ---------- */
+/* 순서형(ordinal) 단계 차트 — 단일 계열, sequential blue 램프를 단계별 명도로 사용 (dataviz 스킬 palette.md 참조) */
+
+.stat-tile {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+.stat-tile-label {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.stat-tile-value {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: proportional-nums;
+  line-height: 1.2;
+}
+
+.funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 6px;
+  border-radius: 8px;
+}
+
+.funnel-row:hover,
+.funnel-row:focus-visible {
+  background: var(--color-bg-subtle);
+  outline: none;
+}
+
+.funnel-row:hover .funnel-fill,
+.funnel-row:focus-visible .funnel-fill {
+  filter: brightness(1.08);
+}
+
+.funnel-label {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.funnel-track {
+  flex: 1;
+  height: 18px;
+  background: var(--color-bg-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.funnel-fill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 0 4px 4px 0;
+  transition: filter .15s ease, width .3s ease;
+}
+
+.funnel-value {
+  width: 36px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}

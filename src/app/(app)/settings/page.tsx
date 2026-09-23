@@ -129,7 +129,9 @@ export default function SettingsPage() {
           <CardTitle>AI 연동</CardTitle>
           <CardDescription>
             OpenAI 또는 Anthropic API 키를 등록하면 실제 AI가 공고 분석·이력서 비교·면접 질문을 생성합니다. 키는
-            서버에만 저장되고 브라우저로 다시 전송되지 않습니다.
+            서버에만 저장되고 브라우저로 다시 전송되지 않습니다. <strong>이 계정에만</strong> 연결되는
+            키입니다 — 다른 계정(데모 계정 포함)의 AI 호출에는 쓰이지 않으니, 이 키의 사용량·비용은
+            오직 지금 로그인한 계정으로 실행한 AI 요청에서만 발생합니다.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveAi}>

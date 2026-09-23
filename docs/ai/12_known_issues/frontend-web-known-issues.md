@@ -5,6 +5,15 @@
 - **AI 키가 없으면 AI 기능은 동작하지 않는다.** mock으로 대체하지 않고 `412 NO_API_KEY`를 그대로
   보여준다 — 설정 화면으로 안내하는 알림이 뜬다. 데모 계정으로 로그인해도 AI 기능을 쓰려면 본인의
   OpenAI/Anthropic API 키를 직접 등록해야 한다.
+- **API 키는 계정별로 격리된다 (중요 — 2026-09-23 수정).** 초기 구현은 `.data/ai-settings.json`에
+  키를 전역 단일 레코드로 저장해, 공개 배포 시 아무나 자동 가입해서 소유자의 키로 AI를 호출할 수
+  있는 취약점이 있었다. `src/lib/server/settings-store.ts`를 `userId`를 키로 하는 맵(`Record<userId,
+  StoredAiSettings>`)으로 바꿔 계정별로 분리했다 — 데모 계정(`demo@jiwonnote.app`)은 기본적으로
+  키가 없고, 소유자는 본인 실제 계정에만 키를 등록해야 한다. `/api/ai/*`·`/api/settings/ai`
+  라우트는 항상 `getSessionUserId()`로 얻은 `userId`를 넘겨서 조회·저장한다 — `userId` 없이
+  `getStoredAiSettings()`를 호출하는 코드를 추가하지 말 것(컴파일도 안 되게 시그니처를 바꿔뒀다).
+  운영 배포 시에도 소유자 계정과 데모 계정을 분리해서 쓸 것 — 데모 계정에 실제 키를 등록하면
+  이 격리가 무의미해진다.
 - **실제 DB가 없다.** 공고·지원현황·이력서·면접 데이터는 브라우저 `localStorage`에만 저장된다
   (다른 브라우저/기기에서는 보이지 않음). 인증 사용자와 AI 설정(API 키)만 서버 로컬 JSON
   파일(`/.data/`, gitignored)에 저장된다 — Postgres/Supabase 같은 실제 DB 셋업 없이 바로 동작하게

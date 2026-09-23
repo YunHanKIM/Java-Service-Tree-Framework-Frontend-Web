@@ -31,7 +31,10 @@
 | email | string | 이메일 |
 | passwordHash | string | bcrypt 해시 (`toPublicUser()`로 클라이언트 응답에서는 제외) |
 
-## AiSettings (서버, `.data/ai-settings.json` — 클라이언트에는 마스킹된 형태만 노출)
+## AiSettings (서버, `.data/ai-settings.json` — `userId`를 키로 하는 맵, 계정별 격리)
+
+계정마다 별도 레코드다 — 데모 계정은 기본적으로 키가 없고, 다른 계정의 키를 대신 쓰지 않는다
+(`12_known_issues` 참조). 클라이언트에는 항상 마스킹된 형태만 노출된다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|

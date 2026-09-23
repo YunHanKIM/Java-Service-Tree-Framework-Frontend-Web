@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "분석할 텍스트가 없습니다." }, { status: 400 });
 
-  const settings = getStoredAiSettings();
+  const settings = getStoredAiSettings(userId);
   if (!settings.apiKey) {
     return NextResponse.json({ error: "AI API 키가 설정되지 않았습니다. 설정에서 먼저 등록해주세요.", code: "NO_API_KEY" }, { status: 412 });
   }

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### 보안 수정 — AI API 키 계정별 격리
+
+- v2 초기 배포는 API 키를 전역 단일 레코드로 저장했다 — 공개 배포 시 누구나 자동 가입해서 소유자의
+  키로 AI를 호출할 수 있는 비용/보안 취약점이었다(사용자 지적으로 발견).
+- `settings-store.ts`를 `userId` 맵으로 바꿔 계정별로 완전히 격리. 데모 계정은 기본적으로 키가 없어
+  방문자가 소유자의 비용을 쓸 수 없다. curl로 owner/demo/stranger 세 계정 간 격리를 직접 검증함.
+
 ### 지원노트 v2 — Next.js 전면 재구축
 
 - 스택 전환: vanilla JS + jQuery + Bootstrap(빌드 도구 없음) → Next.js(App Router) + TypeScript +

@@ -1,6 +1,11 @@
 import * as cheerio from "cheerio";
 import type { Frame } from "playwright";
-import { assertPublicUrl, UnsafeUrlError } from "./url-guard";
+import { Agent, fetch as undiciFetch } from "undici";
+import { assertPublicUrl, guardedLookup, UnsafeUrlError } from "./url-guard";
+
+// assertPublicUrl로 검사한 뒤 fetch가 DNS를 다시 해석하면 그 사이 내부 IP로 바뀔 수 있다(DNS rebinding).
+// 실제 소켓 연결 시점의 해석도 같은 검사를 거치도록 커넥터에 guardedLookup을 꽂는다.
+const guardedAgent = new Agent({ connect: { lookup: guardedLookup } });
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36";
@@ -65,11 +70,12 @@ function extractJobPostingJsonLd($: cheerio.CheerioAPI): string | null {
   return text.length >= MIN_USEFUL_TEXT ? text : null;
 }
 
-async function fetchWithCheckedRedirects(startUrl: string): Promise<Response & { finalUrl: string }> {
+async function fetchWithCheckedRedirects(startUrl: string) {
   let current = startUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     await assertPublicUrl(current); // 리다이렉트로 내부 주소로 튀는 경우까지 매 홉마다 검사
-    const res = await fetch(current, {
+    const res = await undiciFetch(current, {
+      dispatcher: guardedAgent,
       headers: { "User-Agent": USER_AGENT, "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8" },
       redirect: "manual",
       signal: AbortSignal.timeout(10000),
@@ -125,14 +131,30 @@ async function crawlWithBrowser(url: string): Promise<CrawlResult | null> {
     }
   }
   try {
-    const page = await browser.newPage({ userAgent: USER_AGENT, locale: "ko-KR" });
-    // 문서·XHR 요청도 내부 주소로는 못 나가게 하고, 본문과 무관한 무거운 리소스는 받지 않는다
+    // 서비스 워커·WebSocket은 page.route를 우회하므로 막는다
+    const page = await browser.newPage({ userAgent: USER_AGENT, locale: "ko-KR", serviceWorkers: "block" });
+    await page.routeWebSocket("**", (ws) => ws.close());
+    // Chromium이 직접 네트워크에 붙지 않게, 모든 요청을 guardedAgent를 거친 fetch로 대신 보내고 응답만 돌려준다.
+    // route.continue()를 쓰면 Chromium이 DNS를 다시 해석해 rebinding 검사가 무력화된다. 리다이렉트는 manual로
+    // 받아 3xx를 그대로 넘기면 브라우저가 따라가면서 다음 요청이 다시 이 핸들러를 거친다.
     await page.route("**/*", async (route) => {
       const req = route.request();
       if (["image", "media", "font"].includes(req.resourceType())) return route.abort();
       try {
         await assertPublicUrl(req.url());
-        return route.continue();
+        const res = await undiciFetch(req.url(), {
+          method: req.method(),
+          headers: req.headers(),
+          body: req.postDataBuffer() ?? undefined,
+          dispatcher: guardedAgent,
+          redirect: "manual",
+          signal: AbortSignal.timeout(15000),
+        });
+        const headers = Object.fromEntries(res.headers);
+        // undici가 이미 압축을 풀었으므로 원래 인코딩·길이 헤더를 넘기면 브라우저가 한 번 더 풀려다 깨진다
+        delete headers["content-encoding"];
+        delete headers["content-length"];
+        return route.fulfill({ status: res.status, headers, body: Buffer.from(await res.arrayBuffer()) });
       } catch {
         return route.abort();
       }

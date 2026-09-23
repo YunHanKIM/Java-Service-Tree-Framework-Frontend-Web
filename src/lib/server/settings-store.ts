@@ -11,6 +11,8 @@ interface StoredAiSettings {
   // 이전 버전 파일에는 없는 필드라 optional — 읽을 때 기본값으로 채운다
   baseUrl?: string;
   visionModel?: string;
+  /** apiKey가 어느 클라우드 프로바이더의 키인지 — local을 거쳐 다른 프로바이더로 바꿀 때 키가 잘못 붙지 않게 */
+  keyProvider?: Exclude<AiProviderName, "local"> | null;
 }
 
 // userId -> 설정. 계정별로 격리 — 한 계정의 키가 다른 계정(특히 데모 계정)의 AI 호출에
@@ -28,6 +30,7 @@ const DEFAULTS: StoredAiSettings = {
   shareAsDemoPool: false,
   baseUrl: LOCAL_DEFAULT_BASE_URL,
   visionModel: "",
+  keyProvider: null,
 };
 
 function readTable(): AiSettingsTable {
@@ -56,18 +59,30 @@ export function saveAiSettings(
   const table = readTable();
   const current = getStoredAiSettings(userId);
   const keepExistingKey = input.apiKey === undefined || input.apiKey === "";
-  // 로컬 LLM은 키가 없다 — 로컬로 바꿔도 기존 클라우드 키는 지우지 않고 그대로 둔다(되돌아갈 때 재입력 불필요)
-  const apiKey =
-    input.provider === "local"
-      ? current.apiKey
-      : keepExistingKey
-        ? current.provider === input.provider || current.provider === "local"
-          ? current.apiKey
-          : null
-        : input.apiKey!;
+  // keyProvider가 없는 이전 버전 데이터는 저장 당시 provider가 곧 키의 주인이다
+  const keyOwner = current.keyProvider ?? (current.provider !== "local" && current.apiKey ? current.provider : null);
+
+  // 로컬 LLM은 키가 없다 — 로컬로 바꿔도 기존 클라우드 키는 지우지 않고 둔다(같은 프로바이더로 돌아갈 때 재입력 불필요).
+  // 클라우드로 바꿀 때는 새 키를 입력했거나, 보관 중인 키의 주인이 그 프로바이더일 때만 키를 쓴다.
+  let apiKey: string | null;
+  let keyProvider: StoredAiSettings["keyProvider"];
+  if (input.provider === "local") {
+    apiKey = current.apiKey;
+    keyProvider = keyOwner;
+  } else if (!keepExistingKey) {
+    apiKey = input.apiKey!;
+    keyProvider = input.provider;
+  } else if (keyOwner === input.provider) {
+    apiKey = current.apiKey;
+    keyProvider = keyOwner;
+  } else {
+    apiKey = null;
+    keyProvider = null;
+  }
   const next: Required<StoredAiSettings> = {
     provider: input.provider,
     apiKey,
+    keyProvider,
     model: input.model || DEFAULT_MODEL_BY_PROVIDER[input.provider],
     shareAsDemoPool: input.shareAsDemoPool ?? current.shareAsDemoPool,
     baseUrl: input.baseUrl || current.baseUrl,

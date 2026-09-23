@@ -12,6 +12,10 @@ export interface ImageTextResult {
   notice?: string;
 }
 
+// 비전 모델 전체(모든 페이지 합산) 시간 예산. 넘기면 남은 페이지는 포기하고 OCR로 전환한다 —
+// 느린 로컬 모델 때문에 요청 하나가 몇 분씩 붙잡히지 않게
+const VISION_BUDGET_MS = 90_000;
+
 async function ocrWithTesseract(images: Buffer[]): Promise<string> {
   const { createWorker } = await import("tesseract.js");
   // 언어 데이터(kor/eng)는 첫 실행 때 CDN에서 받아 .data/(gitignored)에 캐시한다
@@ -42,9 +46,14 @@ export async function imagesToText(userId: string, images: Buffer[]): Promise<Im
 
   if (settings.provider === "local" && settings.visionModel) {
     try {
+      const deadline = Date.now() + VISION_BUDGET_MS;
       const texts: string[] = [];
       for (const image of images) {
-        texts.push(await transcribeImageWithLocalModel(settings.baseUrl, settings.visionModel, image.toString("base64")));
+        const remaining = deadline - Date.now();
+        if (remaining < 5000) throw new Error("비전 모델 처리 시간 초과");
+        texts.push(
+          await transcribeImageWithLocalModel(settings.baseUrl, settings.visionModel, image.toString("base64"), remaining)
+        );
       }
       const text = texts.join("\n\n").trim();
       if (text) return { text, method: "vision" };

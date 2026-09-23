@@ -47,7 +47,8 @@ async function ollamaChat(
   baseUrl: string,
   model: string,
   messages: OllamaMessage[],
-  format?: Record<string, unknown>
+  format?: Record<string, unknown>,
+  timeoutMs: number = TIMEOUT_MS
 ): Promise<string> {
   let res: Response;
   try {
@@ -61,7 +62,7 @@ async function ollamaChat(
         ...(format ? { format } : {}),
         options: { temperature: 0.4, num_ctx: NUM_CTX },
       }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {
     const timedOut = err instanceof Error && err.name === "TimeoutError";
@@ -103,15 +104,26 @@ export async function listLocalModels(baseUrl: string): Promise<string[]> {
 }
 
 /** 비전 모델로 이미지 속 글자를 그대로 옮겨 적는다 (공고 스크린샷·스캔 PDF 페이지용) */
-export async function transcribeImageWithLocalModel(baseUrl: string, model: string, imageBase64: string): Promise<string> {
-  const text = await ollamaChat(baseUrl, model, [
-    {
-      role: "user",
-      content:
-        "이 이미지는 채용공고(또는 이력서) 캡처입니다. 이미지에 보이는 글자를 빠짐없이, 원래 순서대로 옮겨 적으세요. 요약하거나 설명을 덧붙이지 말고 텍스트만 출력하세요.",
-      images: [imageBase64],
-    },
-  ]);
+export async function transcribeImageWithLocalModel(
+  baseUrl: string,
+  model: string,
+  imageBase64: string,
+  timeoutMs: number
+): Promise<string> {
+  const text = await ollamaChat(
+    baseUrl,
+    model,
+    [
+      {
+        role: "user",
+        content:
+          "이 이미지는 채용공고(또는 이력서) 캡처입니다. 이미지에 보이는 글자를 빠짐없이, 원래 순서대로 옮겨 적으세요. 요약하거나 설명을 덧붙이지 말고 텍스트만 출력하세요.",
+        images: [imageBase64],
+      },
+    ],
+    undefined,
+    timeoutMs
+  );
   return text.trim();
 }
 

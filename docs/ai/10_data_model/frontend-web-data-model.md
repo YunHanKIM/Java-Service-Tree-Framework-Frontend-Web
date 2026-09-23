@@ -91,6 +91,7 @@ openai → local → anthropic처럼 로컬을 거쳐 다른 프로바이더로 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | fitScore | number (optional) | 0~100 적합도. 이 필드 추가 이전에 저장된 분석에는 없다 |
+| fitReason | string (optional) | 적합도 근거 2~3문장 — 앱 적합도 카드와 Notion 적합도 callout에 표시 |
 | matchingSkills | `{name, postingEvidence, resumeEvidence}[]` | 일치하는 경험 — 공고/이력서 양쪽 근거를 각각 인용 |
 | missingSkills | `{name, reason}[]` | 보완할 경험 + 판단 근거 |
 | prepItems | `{id, label, done}[]` | 추천 준비 항목 체크리스트 (id는 `/api/ai/compare`가 서버에서 부여) |

@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     const hasCoverLetter = parsed.data.resume.coverLetterText.trim().length > 0;
     return NextResponse.json({
       fitScore: result.fitScore === undefined ? undefined : Math.max(0, Math.min(100, Math.round(result.fitScore))),
+      fitReason: result.fitReason,
       // 자소서가 없는데 모델이 리뷰를 지어낸 경우는 버린다
       coverLetterReview: hasCoverLetter ? result.coverLetterReview : null,
       matchingSkills: result.matchingSkills,

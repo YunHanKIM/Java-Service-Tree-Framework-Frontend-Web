@@ -199,7 +199,7 @@ function AnalyzePageContent() {
     if (!posting) return;
     setExportingNotion(true);
     try {
-      const { url } = await api.exportToNotion(posting);
+      const { url } = await api.exportToNotion(posting, application?.stage ?? null);
       const updated = postingsStore.update(posting.id, { notionPageUrl: url });
       if (updated) setPosting(updated);
       toast.success("Notion 데이터베이스에 저장했어요.", {

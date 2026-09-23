@@ -67,5 +67,10 @@ Backend-Core가 아니라 **이 저장소 자신의 서버(Route Handler)** 를 
   2025-09-03 이후 버전은 `data_source_id`를 거쳐야 하므로 버전을 올릴 때 함께 수정할 것.
 - 호출 순서: `GET /databases/{id}`(제목 속성 이름·기존 속성 확인) → 없는 관리 속성만 `PATCH /databases/{id}`로
   추가(같은 이름·다른 타입이면 건드리지 않고 그 값만 생략) → `POST /pages`.
-- 관리 속성: `회사`(rich_text) · `적합도`(number) · `마감일`(date) · `필수 기술`(multi_select) · `원문 링크`(url) · `분석일`(date).
+- 관리 속성(= DB 표의 열, 이 순서로 생성): `적합도 등급`(select 🟢높음≥70/🟡보통≥40/🔴낮음) · `적합도`(number) ·
+  `지원 단계`(select, 칸반 단계 — 지원 목록에 저장한 공고만) · `회사` · `마감일`(date) · `근무지` · `고용형태` ·
+  `필수 기술`(multi_select) · `입력 방식`(select) · `원문 링크`(url) · `분석일`(date). 페이지 아이콘 🏢.
+- 페이지 본문: 적합도 callout(등급 색·점수·▰▱ 막대·`fitReason`) → 공고 정보 callout → 일치/보완 경험 **표**(table 블록)
+  → 준비 항목 to_do → 자기소개서 피드백·공고 요약은 toggle로 접음. 숫자 속성의 막대 표시는 API로 켤 수 없어 본문에 글자로 그린다.
+- 페이지 링크를 넣으면 `resolveDatabaseId()`가 그 안의 인라인 DB를 쓰거나 "지원노트 공고" DB를 새로 만든다.
 - 제한: rich_text 조각 1,900자로 자름(API 한도 2,000), children 최대 100블록, multi_select 이름의 쉼표 제거.

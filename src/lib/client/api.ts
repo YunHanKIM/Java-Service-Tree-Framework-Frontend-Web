@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnalysisResult, ExtractedPosting, JobPosting, ResumeProfile } from "@/types/domain";
+import type { AnalysisResult, ExtractedPosting, JobPosting, ResumeProfile, Stage } from "@/types/domain";
 
 export class ApiError extends Error {
   status: number;
@@ -39,7 +39,8 @@ export const api = {
   compareResume: (posting: JobPosting, resume: ResumeProfile) =>
     postJson<AnalysisResult>("/api/ai/compare", { posting, resume }),
   generateQuestions: (posting: JobPosting) => postJson<{ questions: string[] }>("/api/ai/questions", { posting }),
-  exportToNotion: (posting: JobPosting) => postJson<{ url: string }>("/api/notion/export", { posting }),
+  exportToNotion: (posting: JobPosting, stage: Stage | null) =>
+    postJson<{ url: string }>("/api/notion/export", { posting, stage }),
   generateFeedback: (question: string, answer: string) =>
     postJson<{ feedback: string }>("/api/ai/feedback", { question, answer }),
 

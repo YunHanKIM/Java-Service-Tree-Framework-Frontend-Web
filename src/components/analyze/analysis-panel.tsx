@@ -164,9 +164,13 @@ export function AnalysisPanel({
                     <Gauge className="size-4" /> 공고 적합도
                   </p>
                   <Progress value={analysis.fitScore} aria-label="공고 적합도" />
-                  <p className="text-xs text-muted-foreground">
-                    필수 요건 충족도를 중심으로 AI가 매긴 참고 점수예요. 아래 근거와 함께 판단하세요.
-                  </p>
+                  {analysis.fitReason ? (
+                    <p className="text-sm text-muted-foreground">{analysis.fitReason}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      필수 요건 충족도를 중심으로 AI가 매긴 참고 점수예요. 아래 근거와 함께 판단하세요.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

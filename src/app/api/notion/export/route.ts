@@ -4,10 +4,13 @@ import { getSessionUserId } from "@/lib/server/session";
 import { getStoredNotionSettings } from "@/lib/server/notion-store";
 import { exportPostingToNotion, NotionError } from "@/lib/server/notion";
 import { jobPostingSchema, storedAnalysisSchema } from "@/types/schemas";
+import { STAGES } from "@/types/domain";
 import type { JobPosting } from "@/types/domain";
 
 const bodySchema = z.object({
   posting: jobPostingSchema.extend({ analysis: storedAnalysisSchema.nullable() }),
+  // 지원 목록에 저장한 공고면 칸반 단계를 표의 "지원 단계" 열에 넣는다
+  stage: z.enum(STAGES).nullable().optional(),
 });
 
 // 분석한 공고를 사용자의 Notion 데이터베이스에 새 페이지로 저장한다
@@ -27,7 +30,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { url } = await exportPostingToNotion(token, databaseId, parsed.data.posting as JobPosting);
+    const { url } = await exportPostingToNotion(
+      token,
+      databaseId,
+      parsed.data.posting as JobPosting,
+      parsed.data.stage ?? null
+    );
     return NextResponse.json({ url });
   } catch (err) {
     // 노션 토큰 오류(401)를 그대로 넘기면 앱 로그인 만료로 오해할 수 있어 400으로 바꾼다

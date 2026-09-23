@@ -42,6 +42,7 @@ export const COMPARE_SYSTEM_PROMPT = `당신은 채용공고와 지원자의 이
 
 {
   "fitScore": number,
+  "fitReason": string,
   "matchingSkills": [{ "name": string, "postingEvidence": string, "resumeEvidence": string }],
   "missingSkills": [{ "name": string, "reason": string }],
   "prepLabels": string[],
@@ -50,6 +51,7 @@ export const COMPARE_SYSTEM_PROMPT = `당신은 채용공고와 지원자의 이
 
 규칙:
 - fitScore: 0~100 정수. 필수 요건 충족도를 가장 크게, 우대 요건·업무 관련 경험을 그다음으로 반영한다.
+- fitReason: fitScore를 그렇게 매긴 이유 2~3문장. 충족한 핵심 요건과 부족한 핵심 요건을 구체적으로 짚는다.
 - matchingSkills: 공고 요구사항과 이력서(원문이 있으면 원문 우선)에 공통으로 드러나는 기술/경험. postingEvidence/resumeEvidence는 반드시 주어진 입력 텍스트를 인용하거나 요약해서 작성 (지어내지 말 것).
 - missingSkills: 공고에는 있지만 이력서에서 근거를 찾기 어려운 기술. reason은 왜 부족하다고 판단했는지 공고 내용을 근거로 설명.
 - prepLabels: 부족한 부분을 보완하기 위한 구체적 준비 항목 2~4개 (예: "OO 개념 복습하기").

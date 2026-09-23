@@ -32,6 +32,7 @@ export const analysisResultSchema = z.object({
   // 필수 — 모델이 빠뜨리면 0점으로 위장하지 않고 검증 실패(재시도 안내)로 처리한다. optional로 두면 Ollama
   // structured outputs가 이 필드를 생략해도 되는 것으로 보고 실제로 자주 빠뜨린다(실측)
   fitScore: z.number(),
+  fitReason: z.string(),
   matchingSkills: z.array(matchingSkillSchema).default([]),
   missingSkills: z.array(missingSkillSchema).default([]),
   prepLabels: z.array(z.string()).default([]),

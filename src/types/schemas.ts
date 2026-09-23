@@ -31,6 +31,7 @@ export const jobPostingSchema = z.object({
 // localStorage에 저장된 분석 결과 — Notion 내보내기처럼 서버가 내용을 실제로 쓰는 곳에서만 검증한다
 export const storedAnalysisSchema = z.object({
   fitScore: z.number().optional(),
+  fitReason: z.string().optional(),
   matchingSkills: z.array(z.object({ name: z.string(), postingEvidence: z.string(), resumeEvidence: z.string() })),
   missingSkills: z.array(z.object({ name: z.string(), reason: z.string() })),
   prepItems: z.array(z.object({ id: z.string(), label: z.string(), done: z.boolean() })),

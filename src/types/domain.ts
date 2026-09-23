@@ -80,6 +80,8 @@ export interface CoverLetterReview {
 export interface AnalysisResult {
   /** 0~100. 이전 버전에서 저장된 분석에는 없다 */
   fitScore?: number;
+  /** 적합도 점수의 근거 (fitScore와 함께 추가된 필드 — 이전 분석에는 없다) */
+  fitReason?: string;
   matchingSkills: MatchingSkill[];
   missingSkills: MissingSkill[];
   prepItems: PrepItem[];

@@ -239,7 +239,7 @@ function AnalyzePageContent() {
                     <AlertTitle>AI API 키가 필요해요</AlertTitle>
                     <AlertDescription>
                       설정에서 OpenAI 또는 Anthropic API 키를 등록하면 실제 AI 분석을 사용할 수 있어요.
-                      <Button variant="link" className="h-auto px-0" render={<Link href="/settings" />}>
+                      <Button variant="link" className="h-auto px-0" nativeButton={false} render={<Link href="/settings" />}>
                         <Settings className="size-3.5" /> 설정으로 이동
                       </Button>
                     </AlertDescription>

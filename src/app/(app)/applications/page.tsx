@@ -13,8 +13,11 @@ import { ensureSeedData } from "@/lib/client/seed";
 import { applicationsStore } from "@/lib/client/store";
 import { STAGES, STAGE_LABELS } from "@/types/domain";
 import type { ApplicationWithPosting, Stage } from "@/types/domain";
+import { roParticle } from "@/lib/client/korean";
 
 type SortOrder = "recent" | "deadline";
+
+const SORT_LABEL: Record<SortOrder, string> = { recent: "최신 등록순", deadline: "마감 임박순" };
 
 // 서버가 없어 진짜 실패는 없지만, 낙관적 업데이트의 실패-복구 흐름을 보여주기 위해 12% 확률로 실패를 시뮬레이션한다.
 function simulateCommit(): Promise<void> {
@@ -71,7 +74,7 @@ export default function ApplicationsPage() {
     try {
       await simulateCommit();
       applicationsStore.updateStage(id, newStage);
-      toast.success(`"${current.posting?.title ?? "공고"}" → ${STAGE_LABELS[newStage]}(으)로 이동했어요.`);
+      toast.success(`"${current.posting?.title ?? "공고"}" → ${STAGE_LABELS[newStage]}${roParticle(STAGE_LABELS[newStage])} 이동했어요.`);
     } catch {
       setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, stage: previousStage } : e)));
       toast.error("상태 변경에 실패했어요. 다시 시도해주세요.");
@@ -111,7 +114,7 @@ export default function ApplicationsPage() {
         </div>
         <Select value={sort} onValueChange={(v) => setSort(v as SortOrder)}>
           <SelectTrigger className="w-40">
-            <SelectValue />
+            <SelectValue>{(v: SortOrder) => SORT_LABEL[v]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="recent">최신 등록순</SelectItem>

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { STAGES, STAGE_LABELS } from "@/types/domain";
 import type { ApplicationWithPosting, Stage } from "@/types/domain";
+import { roParticle } from "@/lib/client/korean";
 
 function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
@@ -71,7 +72,7 @@ export function KanbanCard({
             <DropdownMenuContent align="end">
               {STAGES.map((stage) => (
                 <DropdownMenuItem key={stage} disabled={stage === entry.stage} onClick={() => onChangeStage(stage)}>
-                  {STAGE_LABELS[stage]}로 이동
+                  {STAGE_LABELS[stage]}{roParticle(STAGE_LABELS[stage])} 이동
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

@@ -85,6 +85,7 @@ export function AnalysisPanel({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<a href={posting.originalUrl} target="_blank" rel="noopener noreferrer" />}
               >
                 <ExternalLink /> 원문 보기
@@ -109,7 +110,7 @@ export function AnalysisPanel({
                 <Badge variant="secondary">
                   <BookmarkPlus className="size-3" /> 지원 현황: {STAGE_LABELS[application.stage]}
                 </Badge>
-                <Button variant="outline" size="sm" render={<Link href="/applications" />}>
+                <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/applications" />}>
                   칸반에서 관리
                 </Button>
               </div>
@@ -189,6 +190,7 @@ export function AnalysisPanel({
                 variant="outline"
                 size="sm"
                 className="mt-2"
+                nativeButton={false}
                 render={<Link href={application ? `/interview?applicationId=${application.id}` : "/interview"} />}
               >
                 <MessageSquareText /> 예상 면접 질문 준비하기

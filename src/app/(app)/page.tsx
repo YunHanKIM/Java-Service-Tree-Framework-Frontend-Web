@@ -76,7 +76,7 @@ export default function DashboardPage() {
         title="대시보드"
         description="오늘의 노력이 더 나은 기회를 만듭니다."
         action={
-          <Button render={<Link href="/analyze" />}>
+          <Button nativeButton={false} render={<Link href="/analyze" />}>
             <Plus /> 새 공고 분석
           </Button>
         }
@@ -139,7 +139,7 @@ export default function DashboardPage() {
               icon={Inbox}
               message="아직 등록한 공고가 없어요."
               action={
-                <Button render={<Link href="/analyze" />} size="sm">
+                <Button nativeButton={false} render={<Link href="/analyze" />} size="sm">
                   첫 공고 분석하기
                 </Button>
               }

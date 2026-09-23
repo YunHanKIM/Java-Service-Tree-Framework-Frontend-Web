@@ -61,7 +61,7 @@ export function ApplicationDetailDialog({
           <Label className="text-xs font-semibold text-muted-foreground">지원 단계</Label>
           <Select value={entry.stage} onValueChange={(v) => onChangeStage(entry.id, v as Stage)}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>{(v: Stage) => STAGE_LABELS[v]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {STAGES.map((s) => (
@@ -85,14 +85,14 @@ export function ApplicationDetailDialog({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" render={<Link href={`/analyze?postingId=${posting.id}`} />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/analyze?postingId=${posting.id}`} />}>
             <FileText /> 공고 분석 다시 보기
           </Button>
-          <Button variant="outline" size="sm" render={<Link href={`/interview?applicationId=${entry.id}`} />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/interview?applicationId=${entry.id}`} />}>
             <MessageSquareText /> 면접 준비
           </Button>
           {posting.originalUrl && (
-            <Button variant="outline" size="sm" render={<a href={posting.originalUrl} target="_blank" rel="noopener noreferrer" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<a href={posting.originalUrl} target="_blank" rel="noopener noreferrer" />}>
               <ExternalLink /> 원문
             </Button>
           )}

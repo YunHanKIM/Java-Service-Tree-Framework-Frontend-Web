@@ -138,7 +138,7 @@ export default function SettingsPage() {
               <Label>AI 프로바이더</Label>
               <Select value={provider} onValueChange={(v) => setProvider(v as AiProviderName)}>
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue>{(v: AiProviderName) => PROVIDER_LABEL[v]}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="anthropic">{PROVIDER_LABEL.anthropic}</SelectItem>

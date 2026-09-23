@@ -100,7 +100,7 @@ function InterviewPageContent() {
             <EmptyState
               message="아직 지원 목록에 저장된 공고가 없어요."
               action={
-                <Button size="sm" render={<Link href="/analyze" />}>
+                <Button size="sm" nativeButton={false} render={<Link href="/analyze" />}>
                   공고 분석하러 가기
                 </Button>
               }
@@ -120,7 +120,12 @@ function InterviewPageContent() {
           <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">준비할 지원 항목</label>
           <Select value={selectedId} onValueChange={handleSelect}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>
+                {(id: string) => {
+                  const a = applications.find((x) => x.id === id);
+                  return a ? `${a.posting!.company} · ${a.posting!.title} (${STAGE_LABELS[a.stage]})` : "";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {applications.map((a) => (
@@ -139,7 +144,7 @@ function InterviewPageContent() {
           <AlertTitle>AI API 키가 필요해요</AlertTitle>
           <AlertDescription>
             설정에서 OpenAI 또는 Anthropic API 키를 등록하면 실제 AI가 질문·피드백을 생성해요.
-            <Button variant="link" className="h-auto px-0" render={<Link href="/settings" />}>
+            <Button variant="link" className="h-auto px-0" nativeButton={false} render={<Link href="/settings" />}>
               <Settings className="size-3.5" /> 설정으로 이동
             </Button>
           </AlertDescription>

@@ -1,31 +1,136 @@
-# Java-Service-Tree-Framework-Frontend-Web
+# 지원노트 (JiwonNote)
 
-Java-Service-Tree-Framework MSA의 프론트엔드 모듈. vanilla JavaScript · jQuery · Bootstrap 기반
-서버렌더링/멀티페이지 웹 UI. Backend-Core API를 AJAX로 소비한다.
+> AI 채용공고 분석 · 이력서 비교 · 지원 관리를 한 곳에서.
+> 빌드 도구 없는 순수 HTML/CSS/JS(+jQuery, Bootstrap)로 만든 포트폴리오 프로젝트입니다.
+
+## 서비스 소개
+
+취업을 준비하다 보면 "공고를 저장해두고 → 내 이력서와 비교해보고 → 지원 여부를 결정하고 →
+여러 곳에 지원한 현황을 관리하고 → 면접까지 준비"하는 과정을 여러 도구(메모장, 엑셀, 즐겨찾기)에
+흩어놓게 됩니다. 지원노트는 이 흐름을 한 화면 안에서 처리합니다.
+
+- **공고 분석**: 링크/본문 붙여넣기/PDF 중 하나로 공고를 입력하면 AI가 핵심 정보를 구조화해서 추출
+- **이력서 비교**: 내 이력서와 공고를 비교해 일치하는 경험 · 보완할 경험을 근거와 함께 제시
+- **지원 관리**: 관심 → 지원예정 → 지원완료 → 면접 → 결과, 5단계 칸반으로 관리
+- **면접 준비**: 공고 맞춤 예상 질문에 답변을 작성하고 AI 피드백을 받기
+
+## 문제 정의 · 왜 이 프로젝트인가
+
+단순 "AI 챗봇 UI"는 복잡한 상태 관리·비동기 흐름·실무 수준 UI 완성도를 보여주기 어렵습니다.
+지원노트는 칸반 드래그 앤 드롭, 낙관적 업데이트와 실패 복구, 다단계 비동기 AI 흐름(추출 → 확인·수정
+→ 비교분석), 로딩·빈 화면·오류 상태 설계까지 — 프론트엔드 실무에서 실제로 마주치는 문제들을
+의도적으로 포함해서 만들었습니다.
+
+## 사용자 흐름
+
+```
+공고 URL/본문/PDF 입력 → AI 추출 → 사용자 확인·수정 → 저장
+   → AI가 이력서와 비교(일치/보완 경험 + 근거) → 지원 목록에 저장
+   → 칸반에서 단계 관리 → 면접 단계 진입 시 예상 질문 생성 → 답변 작성 + AI 피드백
+```
+
+## 주요 화면
+
+| 화면 | 경로 | 설명 |
+|------|------|------|
+| 대시보드 | `index.html` | 지원 파이프라인 차트, 마감 임박 공고, 최근 등록 공고 |
+| 로그인 | `pages/login.html` | 목 세션 로그인 (데모 계정 1클릭 체험 가능) |
+| 공고 분석 | `pages/analyze.html` | 3가지 입력 방식 → AI 추출 → 비교분석 |
+| 지원 관리 | `pages/applications.html` | 5단 칸반, 드래그 앤 드롭 + 낙관적 업데이트 |
+| 면접 준비 | `pages/interview.html` | 예상 질문 · 답변 · AI 피드백 |
+
+## 기술 선택 근거
+
+| 영역 | 선택 | 이유 |
+|------|------|------|
+| 마크업/스타일 | 시맨틱 HTML + Bootstrap 5.3.3 | 빌드 도구 없는 멀티페이지 사이트에 적합, 반응형·컴포넌트(offcanvas, modal, toast)를 빠르게 활용 |
+| 스크립팅 | vanilla JS + jQuery 3.7.1 | DOM 조작·이벤트 위임을 짧게 표현, React 등 프레임워크 없이도 상태 관리 패턴(낙관적 업데이트, 비동기 로딩)을 직접 구현해서 보여줌 |
+| 데이터 계층 | `localStorage` | 별도 백엔드 없이 완결된 데모 제공 — 함수 시그니처는 실제 API 응답 형태(Promise, 구조화된 JSON)를 흉내 내 추후 실제 백엔드로 교체 가능하도록 설계 |
+| "AI" 분석 | 규칙 기반 목(mock) 엔진 | 브라우저에 LLM API 키를 노출하는 것은 보안 위험이라 배제. 대신 실제 AI 응답과 동일한 비동기/구조화 패턴을 재현해 인터랙션 설계에 집중 |
+| 폰트 | Pretendard (SIL OFL, 무료) | 한글 가독성이 좋은 오픈소스 폰트 |
+| 디자인 | Notion 스타일 | 밝은 배경, 얇은 보더, 부드러운 그림자, 여백 중심의 절제된 UI |
+
+## 아키텍처
+
+```
+pages/*.html (화면)
+   ↓ 각 페이지는 아래 공통 모듈을 동일한 순서로 로드
+assets/js/common/
+   ├── util.js     — 순수 유틸 (id/날짜/이스케이프)
+   ├── store.js    — localStorage 데이터 계층 (도메인별 네임스페이스: auth/resume/postings/applications/interview)
+   ├── seed.js     — 최초 1회 데모 데이터 시드
+   ├── mock-ai.js  — 목 AI 엔진 (파싱/비교/질문생성/피드백) — Promise 기반, 실제 API처럼 지연·실패를 흉내냄
+   ├── auth.js     — 로그인 가드
+   └── nav.js      — 활성 메뉴·로그아웃 공통 동작
+assets/js/pages/<page>.js  — 화면별 렌더링/이벤트 로직
+```
+
+빌드 도구가 없어 모듈 시스템(ESM/번들러) 대신 전역 객체(`Util`, `Store`, `MockAI`, `Auth`, `Nav`)와
+스크립트 로드 순서로 의존성을 관리합니다. 자세한 구조는 `docs/ai/03_directory_structure`, 데이터
+스키마는 `docs/ai/10_data_model` 참조.
+
+## 어려웠던 문제와 해결 과정
+
+- **"AI 기능"을 실제 API 없이 어떻게 정직하게 구현할까**: 텍스트만 그럴듯하게 출력하는 가짜 대신,
+  ①정규식/키워드 기반의 실제 텍스트 처리 로직 ②Promise + 인위적 지연으로 진짜 비동기 호출과 동일한
+  로딩/스트리밍 UX ③실패 가능한 경로(링크 가져오기)는 실제로 실패시키고 복구 흐름을 붙이는 방식을
+  택했습니다. `docs/ai/12_known_issues`에 이 경계를 명시해뒀습니다.
+- **빌드 도구 없이 칸반 드래그 앤 드롭 + 낙관적 업데이트**: 외부 라이브러리 없이 HTML5 Drag and Drop
+  API로 구현하고, 상태 변경은 "먼저 DOM을 옮기고 → 비동기 커밋을 시도하고 → 실패하면 원래 위치로
+  되돌리는" 패턴을 직접 작성했습니다(`assets/js/pages/applications.js`의 `changeStage()`). 실패를
+  체감할 수 있도록 12% 확률로 실패를 시뮬레이션합니다.
+- **빌드 도구 없는 멀티페이지에서의 반복**: 사이드바·상단바 마크업은 페이지마다 복제됩니다(SSR
+  include가 없음). 대신 동작(활성 메뉴, 로그아웃, 인증 가드)은 `nav.js`/`auth.js` 공통 모듈로 묶어
+  로직 중복은 피했습니다.
+
+## 성능 및 테스트 결과
+
+- Playwright(Chromium)로 로그인 → 대시보드 → 공고 분석(붙여넣기 → 추출 → 확인·수정 → 비교분석 →
+  지원목록 저장) → 지원 관리(칸반 카드 클릭·검색) → 면접 준비(질문 생성 → 답변 → 피드백) 전체
+  흐름과 390px 모바일 뷰포트(오프캔버스 내비게이션 포함)를 자동 스모크 테스트 — **콘솔 에러 0건**
+- 정적 파일이라 별도 빌드/번들 크기 이슈 없음 (외부 리소스는 Bootstrap/jQuery/Bootstrap Icons/
+  Pretendard CDN)
+
+## 향후 개선 사항
+
+- 실제 백엔드 연동 (현재 mock 인터페이스와 동일한 시그니처로 `assets/js/common/ajax.js` 교체)
+- URL 자동 가져오기(2단계) — 현재는 항상 "본문 붙여넣기로 전환" 안내만 수행
+- 자동화 테스트(Playwright) 스위트를 리포지토리에 포함해 회귀 방지
+- Lighthouse 기반 성능 측정 및 Core Web Vitals 추적
+
+## 실행
+
+빌드 단계 없음 — 정적 파일 서버로 `index.html`을 열거나 서빙하면 된다. 데이터는 브라우저
+`localStorage`에 저장되며, 최초 접속 시 데모 데이터가 자동으로 채워진다.
+
+```bash
+python -m http.server 8080   # 또는: npx serve .
+```
+
+배포 방법은 `docs/ai/13_deploy_runbook` 참조 (GitHub Pages 등 무료 정적 호스팅 권장).
 
 ## 구조
 
 ```
 .
-├── index.html                 # 진입 페이지
-├── pages/                     # 페이지 추가 시 여기에 <page>.html
+├── index.html                        # 대시보드 (진입 페이지)
+├── pages/                            # login / analyze / applications / interview
 ├── assets/
-│   ├── css/main.css           # 커스텀 스타일
+│   ├── css/main.css                  # Notion 스타일 디자인 시스템
 │   └── js/
-│       ├── common/
-│       │   ├── config.js      # API base URL 등 환경 설정
-│       │   └── ajax.js        # Backend-Core 호출 공통 래퍼
-│       └── pages/              # 페이지별 JS (<page>.js)
-└── docs/ai/                   # AI 작업 하네스 문서
+│       ├── common/                   # util / store / seed / mock-ai / auth / nav (+ config/ajax: 레거시)
+│       └── pages/                    # 화면별 JS
+└── docs/ai/                          # AI 작업 하네스 문서 (화면별 규칙: 06_page_playbooks/)
 ```
-
-## 실행
-
-빌드 단계 없음 — 정적 파일 서버로 `index.html`을 열거나 서빙하면 된다.
-API 호출 대상은 `assets/js/common/config.js`의 `apiBaseUrl`로 설정한다.
 
 ## 새 페이지 추가
 
-1. `pages/<page>.html` 생성 (index.html 상단 `<head>`/네비게이션 구조 복사)
-2. `assets/js/pages/<page>.js` 생성, `index.html`의 스크립트 태그 패턴대로 로드
-3. 화면별 규칙이 생기면 `docs/ai/06_page_playbooks/`에 기록
+1. `pages/<page>.html` 생성 (기존 페이지의 `<head>`/사이드바·상단바 마크업 복사)
+2. `assets/js/pages/<page>.js` 생성 — 시작부에 `Auth.requireLogin(...)`, `Seed.ensure()`, `Nav.init()` 호출
+3. 화면별 규칙은 `docs/ai/06_page_playbooks/<page>.md`에 기록
+
+---
+
+> 이 저장소는 원래 Java-Service-Tree-Framework MSA의 프론트엔드 모듈 스캐폴딩으로 시작했습니다.
+> 현재는 "지원노트" 포트폴리오 프로젝트로 범위를 확정해 구현했습니다 — 배경은
+> `docs/ai/01_project_overview` 참조.

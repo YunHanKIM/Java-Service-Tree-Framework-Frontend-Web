@@ -20,10 +20,9 @@ export async function POST(req: NextRequest) {
   if (!access.ok) {
     return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   }
-  const { provider: providerName, apiKey, model } = access.credentials;
 
   try {
-    const provider = createAiProvider(providerName, apiKey, model);
+    const provider = createAiProvider(access.credentials);
     const extracted = await provider.extractPosting(parsed.data);
     return NextResponse.json(extracted);
   } catch (err) {

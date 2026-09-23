@@ -7,6 +7,8 @@ export interface AiCredentials {
   provider: AiProviderName;
   apiKey: string;
   model: string;
+  /** 로컬 LLM(Ollama) 주소 — provider가 "local"일 때만 사용 */
+  baseUrl: string | null;
   /** "own" = 본인이 등록한 키(무제한, 본인 비용) · "demo-pool" = 소유자가 공유한 체험 풀(일일 한도 적용) */
   source: "own" | "demo-pool";
 }
@@ -22,8 +24,17 @@ export type AiAccessResult =
  */
 export function resolveAiAccess(userId: string, req: NextRequest): AiAccessResult {
   const own = getStoredAiSettings(userId);
+  if (own.provider === "local") {
+    return {
+      ok: true,
+      credentials: { provider: "local", apiKey: "", model: own.model, baseUrl: own.baseUrl, source: "own" },
+    };
+  }
   if (own.apiKey) {
-    return { ok: true, credentials: { provider: own.provider, apiKey: own.apiKey, model: own.model, source: "own" } };
+    return {
+      ok: true,
+      credentials: { provider: own.provider, apiKey: own.apiKey, model: own.model, baseUrl: null, source: "own" },
+    };
   }
 
   const pool = findDemoPoolSettings();
@@ -38,7 +49,10 @@ export function resolveAiAccess(userId: string, req: NextRequest): AiAccessResul
 
   // 풀을 공유한 소유자 본인이 호출하는 경우는 한도 없이 통과(어차피 본인 비용)
   if (pool.ownerUserId === userId) {
-    return { ok: true, credentials: { provider: pool.provider, apiKey: pool.apiKey!, model: pool.model, source: "own" } };
+    return {
+      ok: true,
+      credentials: { provider: pool.provider, apiKey: pool.apiKey!, model: pool.model, baseUrl: null, source: "own" },
+    };
   }
 
   const quota = consumeDemoQuota(getClientIp(req));
@@ -46,5 +60,8 @@ export function resolveAiAccess(userId: string, req: NextRequest): AiAccessResul
     return { ok: false, status: 429, code: "DEMO_LIMIT_REACHED", error: quota.reason };
   }
 
-  return { ok: true, credentials: { provider: pool.provider, apiKey: pool.apiKey!, model: pool.model, source: "demo-pool" } };
+  return {
+    ok: true,
+    credentials: { provider: pool.provider, apiKey: pool.apiKey!, model: pool.model, baseUrl: null, source: "demo-pool" },
+  };
 }

@@ -26,10 +26,9 @@ export async function POST(req: NextRequest) {
   if (!access.ok) {
     return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   }
-  const { provider: providerName, apiKey, model } = access.credentials;
 
   try {
-    const provider = createAiProvider(providerName, apiKey, model);
+    const provider = createAiProvider(access.credentials);
     const result = await provider.compareResume(parsed.data.posting as JobPosting, parsed.data.resume);
     return NextResponse.json({
       matchingSkills: result.matchingSkills,

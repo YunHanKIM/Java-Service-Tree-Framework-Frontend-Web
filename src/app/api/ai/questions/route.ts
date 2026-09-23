@@ -19,10 +19,9 @@ export async function POST(req: NextRequest) {
   if (!access.ok) {
     return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   }
-  const { provider: providerName, apiKey, model } = access.credentials;
 
   try {
-    const provider = createAiProvider(providerName, apiKey, model);
+    const provider = createAiProvider(access.credentials);
     const questions = await provider.generateQuestions(parsed.data.posting as JobPosting);
     return NextResponse.json({ questions });
   } catch (err) {

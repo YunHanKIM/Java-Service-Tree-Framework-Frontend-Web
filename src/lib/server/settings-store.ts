@@ -1,12 +1,16 @@
 import { readJsonFile, writeJsonFile } from "./data-dir";
 import type { AiProviderName, AiSettings } from "@/types/domain";
 import { DEFAULT_MODEL_BY_PROVIDER } from "@/lib/ai";
+import { LOCAL_DEFAULT_BASE_URL } from "@/lib/ai/local";
 
 interface StoredAiSettings {
   provider: AiProviderName;
   apiKey: string | null;
   model: string;
   shareAsDemoPool: boolean;
+  // 이전 버전 파일에는 없는 필드라 optional — 읽을 때 기본값으로 채운다
+  baseUrl?: string;
+  visionModel?: string;
 }
 
 // userId -> 설정. 계정별로 격리 — 한 계정의 키가 다른 계정(특히 데모 계정)의 AI 호출에
@@ -22,6 +26,8 @@ const DEFAULTS: StoredAiSettings = {
   apiKey: null,
   model: DEFAULT_MODEL_BY_PROVIDER.anthropic,
   shareAsDemoPool: false,
+  baseUrl: LOCAL_DEFAULT_BASE_URL,
+  visionModel: "",
 };
 
 function readTable(): AiSettingsTable {
@@ -32,22 +38,40 @@ function writeTable(table: AiSettingsTable): void {
   writeJsonFile(FILE, table);
 }
 
-export function getStoredAiSettings(userId: string): StoredAiSettings {
-  return readTable()[userId] ?? DEFAULTS;
+export function getStoredAiSettings(userId: string): Required<StoredAiSettings> {
+  return { ...DEFAULTS, ...readTable()[userId] } as Required<StoredAiSettings>;
 }
 
 export function saveAiSettings(
   userId: string,
-  input: { provider: AiProviderName; apiKey?: string; model?: string; shareAsDemoPool?: boolean }
-): StoredAiSettings {
+  input: {
+    provider: AiProviderName;
+    apiKey?: string;
+    model?: string;
+    shareAsDemoPool?: boolean;
+    baseUrl?: string;
+    visionModel?: string;
+  }
+): Required<StoredAiSettings> {
   const table = readTable();
-  const current = table[userId] ?? DEFAULTS;
+  const current = getStoredAiSettings(userId);
   const keepExistingKey = input.apiKey === undefined || input.apiKey === "";
-  const next: StoredAiSettings = {
+  // 로컬 LLM은 키가 없다 — 로컬로 바꿔도 기존 클라우드 키는 지우지 않고 그대로 둔다(되돌아갈 때 재입력 불필요)
+  const apiKey =
+    input.provider === "local"
+      ? current.apiKey
+      : keepExistingKey
+        ? current.provider === input.provider || current.provider === "local"
+          ? current.apiKey
+          : null
+        : input.apiKey!;
+  const next: Required<StoredAiSettings> = {
     provider: input.provider,
-    apiKey: keepExistingKey ? (current.provider === input.provider ? current.apiKey : null) : input.apiKey!,
+    apiKey,
     model: input.model || DEFAULT_MODEL_BY_PROVIDER[input.provider],
     shareAsDemoPool: input.shareAsDemoPool ?? current.shareAsDemoPool,
+    baseUrl: input.baseUrl || current.baseUrl,
+    visionModel: input.visionModel ?? current.visionModel,
   };
   table[userId] = next;
   writeTable(table);
@@ -67,6 +91,8 @@ export function toPublicAiSettings(stored: StoredAiSettings): AiSettings {
     maskedKey: maskKey(stored.apiKey),
     model: stored.model,
     shareAsDemoPool: stored.shareAsDemoPool,
+    baseUrl: stored.baseUrl ?? LOCAL_DEFAULT_BASE_URL,
+    visionModel: stored.visionModel ?? "",
   };
 }
 
@@ -78,7 +104,8 @@ export function toPublicAiSettings(stored: StoredAiSettings): AiSettings {
 export function findDemoPoolSettings(): (StoredAiSettings & { ownerUserId: string }) | null {
   const table = readTable();
   for (const [userId, settings] of Object.entries(table)) {
-    if (settings.shareAsDemoPool && settings.apiKey) {
+    // 로컬 LLM은 소유자 PC에서만 의미가 있어 방문자 풀로 공유하지 않는다
+    if (settings.shareAsDemoPool && settings.apiKey && settings.provider !== "local") {
       return { ...settings, ownerUserId: userId };
     }
   }

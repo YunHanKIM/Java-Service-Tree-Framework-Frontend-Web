@@ -95,13 +95,17 @@ export interface ExtractedPosting {
   responsibilities: string[];
 }
 
-export type AiProviderName = "openai" | "anthropic";
+export type AiProviderName = "openai" | "anthropic" | "local";
 
 export interface AiSettings {
   provider: AiProviderName;
   hasKey: boolean;
   maskedKey: string | null;
   model: string;
+  /** provider가 "local"(Ollama)일 때만 의미 있음 */
+  baseUrl: string;
+  /** 이미지·스캔 PDF를 읽을 로컬 비전 모델 (비우면 OCR로 대체) */
+  visionModel: string;
   /** 이 계정의 키를 키 없는 방문자에게 한도 내에서 무료로 공유할지 (포트폴리오 데모용) */
   shareAsDemoPool: boolean;
 }

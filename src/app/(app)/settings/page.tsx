@@ -16,9 +16,10 @@ import type { AiProviderName, AiSettings, ResumeProfile } from "@/types/domain";
 const PROVIDER_LABEL: Record<AiProviderName, string> = {
   openai: "OpenAI (ChatGPT)",
   anthropic: "Anthropic (Claude)",
+  local: "로컬 LLM (Ollama)",
 };
 
-const PROVIDER_KEY_HELP: Record<AiProviderName, { url: string; label: string }> = {
+const PROVIDER_KEY_HELP: Record<Exclude<AiProviderName, "local">, { url: string; label: string }> = {
   openai: { url: "https://platform.openai.com/api-keys", label: "platform.openai.com에서 발급" },
   anthropic: { url: "https://console.anthropic.com/settings/keys", label: "console.anthropic.com에서 발급" },
 };
@@ -30,6 +31,11 @@ export default function SettingsPage() {
   const [provider, setProvider] = useState<AiProviderName>("anthropic");
   const [apiKey, setApiKey] = useState("");
   const [shareAsDemoPool, setShareAsDemoPool] = useState(false);
+  const [localModel, setLocalModel] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [visionModel, setVisionModel] = useState("");
+  const [localModels, setLocalModels] = useState<string[] | null>(null);
+  const [checkingLocal, setCheckingLocal] = useState(false);
   const [savingResume, setSavingResume] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
 
@@ -44,6 +50,9 @@ export default function SettingsPage() {
       setAiSettings(data);
       setProvider(data.provider);
       setShareAsDemoPool(data.shareAsDemoPool);
+      setBaseUrl(data.baseUrl);
+      setVisionModel(data.visionModel);
+      if (data.provider === "local") setLocalModel(data.model);
     });
   }, []);
 
@@ -67,7 +76,11 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: apiKey || undefined, shareAsDemoPool }),
+        body: JSON.stringify(
+          provider === "local"
+            ? { provider, model: localModel || undefined, baseUrl, visionModel }
+            : { provider, apiKey: apiKey || undefined, shareAsDemoPool }
+        ),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -79,6 +92,24 @@ export default function SettingsPage() {
       toast.success("AI 설정을 저장했어요.");
     } finally {
       setSavingAi(false);
+    }
+  }
+
+  // 저장된 주소 기준으로 확인한다 — 방금 입력한 주소를 확인하려면 먼저 저장해야 한다
+  async function handleCheckLocal() {
+    setCheckingLocal(true);
+    setLocalModels(null);
+    try {
+      const res = await fetch("/api/settings/ai/local-models");
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Ollama 연결에 실패했어요.");
+        return;
+      }
+      setLocalModels(data.models);
+      toast.success(`Ollama 연결 성공 — 모델 ${data.models.length}개`);
+    } finally {
+      setCheckingLocal(false);
     }
   }
 
@@ -147,52 +178,113 @@ export default function SettingsPage() {
                 <SelectContent>
                   <SelectItem value="anthropic">{PROVIDER_LABEL.anthropic}</SelectItem>
                   <SelectItem value="openai">{PROVIDER_LABEL.openai}</SelectItem>
+                  <SelectItem value="local">{PROVIDER_LABEL.local}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="apiKey">API 키</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={aiSettings?.hasKey ? `등록됨 (${aiSettings.maskedKey})` : "sk-..."}
-                autoComplete="off"
-              />
-              <p className="text-xs text-muted-foreground">
-                <a
-                  href={PROVIDER_KEY_HELP[provider].url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-foreground"
-                >
-                  {PROVIDER_KEY_HELP[provider].label}
-                </a>{" "}
-                — ChatGPT Plus·Claude Pro 구독과는 별개로 발급받는 API 키이며, 사용량만큼 과금됩니다.
-              </p>
-            </div>
+            {provider === "local" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="baseUrl">Ollama 주소</Label>
+                  <Input
+                    id="baseUrl"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="http://localhost:11434"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    보안상 localhost/127.0.0.1 주소만 허용돼요. 앱 서버와 같은 PC에서 <code>ollama serve</code>가
+                    실행 중이어야 합니다.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="localModel">분석 모델</Label>
+                  <Input
+                    id="localModel"
+                    value={localModel}
+                    onChange={(e) => setLocalModel(e.target.value)}
+                    placeholder="qwen2.5:7b"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    한국어 공고라면 qwen2.5·gemma3 계열을 추천해요. 먼저 <code>ollama pull qwen2.5:7b</code>로 받아두세요.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="visionModel">
+                    비전 모델 <span className="font-normal text-muted-foreground">(선택)</span>
+                  </Label>
+                  <Input
+                    id="visionModel"
+                    value={visionModel}
+                    onChange={(e) => setVisionModel(e.target.value)}
+                    placeholder="qwen2.5vl:7b"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    공고 이미지·스캔 PDF를 읽을 때 사용해요. 비워두면 내장 OCR(tesseract)로 글자를 인식합니다.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handleCheckLocal} disabled={checkingLocal}>
+                    연결 확인
+                  </Button>
+                  {localModels && (
+                    <span className="text-xs text-muted-foreground">
+                      설치된 모델: {localModels.length > 0 ? localModels.join(", ") : "없음"}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="apiKey">API 키</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={aiSettings?.hasKey ? `등록됨 (${aiSettings.maskedKey})` : "sk-..."}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <a
+                      href={PROVIDER_KEY_HELP[provider].url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-foreground"
+                    >
+                      {PROVIDER_KEY_HELP[provider].label}
+                    </a>{" "}
+                    — ChatGPT Plus·Claude Pro 구독과는 별개로 발급받는 API 키이며, 사용량만큼 과금됩니다.
+                  </p>
+                </div>
 
-            <label className="flex items-start gap-2.5 rounded-lg border p-3 text-sm">
-              <Checkbox checked={shareAsDemoPool} onCheckedChange={(v) => setShareAsDemoPool(Boolean(v))} className="mt-0.5" />
-              <span>
-                <span className="font-medium">방문자에게 무료 체험으로 공유</span>
-                <span className="block text-xs text-muted-foreground">
-                  포트폴리오를 보는 사람이 키 등록 없이 &quot;데모 계정으로 체험하기&quot;만으로 실제 AI를
-                  써볼 수 있게 됩니다. 하루 총 50회, 방문자(IP)당 하루 10회로 한도가 걸려 있어 비용은
-                  제한됩니다 — 본인 계정(키를 직접 등록한 계정)으로 쓸 때는 이 한도가 적용되지 않습니다.
-                </span>
-              </span>
-            </label>
+                <label className="flex items-start gap-2.5 rounded-lg border p-3 text-sm">
+                  <Checkbox checked={shareAsDemoPool} onCheckedChange={(v) => setShareAsDemoPool(Boolean(v))} className="mt-0.5" />
+                  <span>
+                    <span className="font-medium">방문자에게 무료 체험으로 공유</span>
+                    <span className="block text-xs text-muted-foreground">
+                      포트폴리오를 보는 사람이 키 등록 없이 &quot;데모 계정으로 체험하기&quot;만으로 실제 AI를
+                      써볼 수 있게 됩니다. 하루 총 50회, 방문자(IP)당 하루 10회로 한도가 걸려 있어 비용은
+                      제한됩니다 — 본인 계정(키를 직접 등록한 계정)으로 쓸 때는 이 한도가 적용되지 않습니다.
+                    </span>
+                  </span>
+                </label>
+              </>
+            )}
           </CardContent>
           <CardFooter className="flex items-center gap-3">
             <Button type="submit" disabled={savingAi}>
               저장
             </Button>
-            {aiSettings?.hasKey && (
-              <span className="text-xs text-muted-foreground">
-                현재 {PROVIDER_LABEL[aiSettings.provider]} 키가 등록되어 있어요.
-              </span>
+            {aiSettings?.provider === "local" ? (
+              <span className="text-xs text-muted-foreground">현재 로컬 LLM({aiSettings.model})을 사용 중이에요.</span>
+            ) : (
+              aiSettings?.hasKey && (
+                <span className="text-xs text-muted-foreground">
+                  현재 {PROVIDER_LABEL[aiSettings.provider]} 키가 등록되어 있어요.
+                </span>
+              )
             )}
           </CardFooter>
         </form>

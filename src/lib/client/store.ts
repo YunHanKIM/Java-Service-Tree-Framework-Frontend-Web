@@ -2,7 +2,7 @@
 
 // 브라우저 localStorage 데이터 계층 — 실제 백엔드 DB 대신 사용 (docs/ai/09_api_contract, 10_data_model 참조).
 // AI 호출·인증·설정은 서버(Route Handler)가 담당하고, 공고·지원현황·이력서·면접 데이터는 클라이언트에만 저장된다.
-import { STAGES } from "@/types/domain";
+import { EMPTY_RESUME, STAGES } from "@/types/domain";
 import type {
   Application,
   ApplicationWithPosting,
@@ -40,7 +40,8 @@ function writeJson<T>(key: string, value: T): void {
 
 export const resumeStore = {
   get(): ResumeProfile {
-    return readJson<ResumeProfile>(KEYS.resume, { summary: "", skills: [], experienceSummary: "" });
+    // 이력서·자소서 원문 필드가 없는 이전 버전 데이터도 기본값으로 채워서 돌려준다
+    return { ...EMPTY_RESUME, ...readJson<Partial<ResumeProfile>>(KEYS.resume, {}) };
   },
   update(patch: Partial<ResumeProfile>): ResumeProfile {
     const next = { ...this.get(), ...patch };

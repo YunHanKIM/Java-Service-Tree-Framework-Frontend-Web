@@ -19,7 +19,19 @@ export interface ResumeProfile {
   summary: string;
   skills: string[];
   experienceSummary: string;
+  /** 업로드하거나 붙여넣은 이력서 원문 — 비교 분석 시 요약보다 우선하는 근거 */
+  resumeText: string;
+  /** 자기소개서 원문 — 있으면 공고 맞춤 자소서 피드백을 함께 받는다 */
+  coverLetterText: string;
 }
+
+export const EMPTY_RESUME: ResumeProfile = {
+  summary: "",
+  skills: [],
+  experienceSummary: "",
+  resumeText: "",
+  coverLetterText: "",
+};
 
 export type PostingSource = "link" | "paste" | "pdf" | "image";
 
@@ -57,10 +69,20 @@ export interface PrepItem {
   done: boolean;
 }
 
+export interface CoverLetterReview {
+  /** 자소서가 공고의 요구 역량을 얼마나 어필하는지 */
+  alignment: string;
+  suggestions: string[];
+}
+
 export interface AnalysisResult {
+  /** 0~100. 이전 버전에서 저장된 분석에는 없다 */
+  fitScore?: number;
   matchingSkills: MatchingSkill[];
   missingSkills: MissingSkill[];
   prepItems: PrepItem[];
+  /** 자기소개서를 등록하지 않았으면 null */
+  coverLetterReview?: CoverLetterReview | null;
 }
 
 export interface Application {

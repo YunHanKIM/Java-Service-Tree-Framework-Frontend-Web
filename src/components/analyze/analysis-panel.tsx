@@ -8,14 +8,17 @@ import {
   CalendarDays,
   CheckCircle2,
   ExternalLink,
+  Gauge,
   ListChecks,
   MapPin,
   MessageSquareText,
+  PenLine,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { STAGE_LABELS } from "@/types/domain";
 import type { Application, JobPosting } from "@/types/domain";
 
@@ -125,6 +128,26 @@ export function AnalysisPanel({
 
       {analysis && (
         <>
+          {analysis.fitScore !== undefined && (
+            <Card>
+              <CardContent className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="text-3xl font-bold tabular-nums text-primary">{analysis.fitScore}</p>
+                  <p className="text-xs text-muted-foreground">/ 100</p>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Gauge className="size-4" /> 공고 적합도
+                  </p>
+                  <Progress value={analysis.fitScore} aria-label="공고 적합도" />
+                  <p className="text-xs text-muted-foreground">
+                    필수 요건 충족도를 중심으로 AI가 매긴 참고 점수예요. 아래 근거와 함께 판단하세요.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -197,6 +220,36 @@ export function AnalysisPanel({
               </Button>
             </CardContent>
           </Card>
+
+          {analysis.coverLetterReview ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-1.5 text-base">
+                  <PenLine className="size-4" /> 자기소개서 피드백
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm">{analysis.coverLetterReview.alignment}</p>
+                {analysis.coverLetterReview.suggestions.length > 0 && (
+                  <div>
+                    <p className="mb-1 text-xs font-semibold text-muted-foreground">이 공고에 맞춘 수정 제안</p>
+                    <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                      {analysis.coverLetterReview.suggestions.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              설정에서 자기소개서를 등록하면 이 공고에 맞춘 자기소개서 피드백도 받을 수 있어요.{" "}
+              <Link href="/settings" className="underline hover:text-foreground">
+                설정으로 이동
+              </Link>
+            </p>
+          )}
         </>
       )}
     </div>

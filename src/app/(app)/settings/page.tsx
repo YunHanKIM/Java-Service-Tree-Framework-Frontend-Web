@@ -10,7 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Upload } from "lucide-react";
 import { resumeStore } from "@/lib/client/store";
+import { api } from "@/lib/client/api";
+import { EMPTY_RESUME } from "@/types/domain";
 import type { AiProviderName, AiSettings, ResumeProfile } from "@/types/domain";
 
 const PROVIDER_LABEL: Record<AiProviderName, string> = {
@@ -24,8 +27,78 @@ const PROVIDER_KEY_HELP: Record<Exclude<AiProviderName, "local">, { url: string;
   anthropic: { url: "https://console.anthropic.com/settings/keys", label: "console.anthropic.com에서 발급" },
 };
 
+const DOC_MAX_CHARS = 20000;
+
+/** 이력서·자기소개서 원문 입력 — 파일(PDF는 서버에서 텍스트 추출, 스캔본은 OCR)을 올리면 내용을 채우고, 직접 수정도 가능 */
+function DocumentField({
+  id,
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleFile(file: File) {
+    setLoading(true);
+    try {
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        const { text, notice } = await api.parsePdf(file);
+        if (notice) toast.info(notice);
+        onChange(text);
+      } else {
+        onChange((await file.text()).slice(0, DOC_MAX_CHARS));
+      }
+      toast.success(`${file.name}에서 내용을 불러왔어요. 확인 후 저장해주세요.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "파일을 읽지 못했어요.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={id}>
+          {label} <span className="font-normal text-muted-foreground">({value.length.toLocaleString()}자)</span>
+        </Label>
+        <Button type="button" variant="outline" size="sm" disabled={loading} nativeButton={false} render={<label />}>
+          <Upload /> {loading ? "불러오는 중..." : "파일 불러오기"}
+          <input
+            type="file"
+            accept=".pdf,.txt,.md,application/pdf,text/plain"
+            className="sr-only"
+            disabled={loading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) handleFile(file);
+            }}
+          />
+        </Button>
+      </div>
+      <Textarea
+        id={id}
+        rows={6}
+        maxLength={DOC_MAX_CHARS}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="여기에 붙여넣거나 파일을 불러오세요."
+      />
+      <p className="text-xs text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
-  const [resume, setResume] = useState<ResumeProfile>({ summary: "", skills: [], experienceSummary: "" });
+  const [resume, setResume] = useState<ResumeProfile>(EMPTY_RESUME);
   const [skillsInput, setSkillsInput] = useState("");
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null);
   const [provider, setProvider] = useState<AiProviderName>("anthropic");
@@ -149,6 +222,20 @@ export default function SettingsPage() {
                 placeholder="프로젝트 경험, 담당 역할, 주요 성과를 자유롭게 작성하세요."
               />
             </div>
+            <DocumentField
+              id="resumeText"
+              label="이력서 원문"
+              hint="PDF·TXT 파일을 올리거나 직접 붙여넣으세요. 비교 분석 시 요약보다 우선하는 근거로 쓰여요."
+              value={resume.resumeText}
+              onChange={(resumeText) => setResume((r) => ({ ...r, resumeText }))}
+            />
+            <DocumentField
+              id="coverLetterText"
+              label="자기소개서"
+              hint="등록하면 공고마다 자기소개서가 요구 역량을 잘 어필하는지 피드백과 수정 제안을 받을 수 있어요."
+              value={resume.coverLetterText}
+              onChange={(coverLetterText) => setResume((r) => ({ ...r, coverLetterText }))}
+            />
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={savingResume}>

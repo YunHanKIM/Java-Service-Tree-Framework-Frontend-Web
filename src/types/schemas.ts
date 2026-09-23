@@ -5,6 +5,9 @@ export const resumeProfileSchema = z.object({
   summary: z.string(),
   skills: z.array(z.string()),
   experienceSummary: z.string(),
+  // 이전 버전 localStorage에는 없는 필드
+  resumeText: z.string().max(20000).default(""),
+  coverLetterText: z.string().max(20000).default(""),
 });
 
 export const jobPostingSchema = z.object({

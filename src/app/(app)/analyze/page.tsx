@@ -20,6 +20,7 @@ import { AnalysisPanel } from "@/components/analyze/analysis-panel";
 import { ensureSeedData } from "@/lib/client/seed";
 import { applicationsStore, postingsStore, resumeStore } from "@/lib/client/store";
 import { api, ApiError } from "@/lib/client/api";
+import { EMPTY_RESUME } from "@/types/domain";
 import type { Application, ExtractedPosting, JobPosting, PostingSource, ResumeProfile, Stage } from "@/types/domain";
 
 type Tab = PostingSource;
@@ -61,7 +62,7 @@ function AnalyzePageContent() {
   const [application, setApplication] = useState<Application | null>(null);
   const [comparing, setComparing] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
-  const [resume, setResume] = useState<ResumeProfile>({ summary: "", skills: [], experienceSummary: "" });
+  const [resume, setResume] = useState<ResumeProfile>(EMPTY_RESUME);
   const [counts, setCounts] = useState<Partial<Record<Stage, number>>>({});
 
   useEffect(() => {
@@ -207,11 +208,11 @@ function AnalyzePageContent() {
       <PageHeader title="채용공고 분석" description="AI가 공고와 이력서를 분석해 나에게 맞는 포인트를 찾아드려요." />
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <div className="flex flex-col gap-4 lg:col-span-5">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
           <Card>
             <CardContent>
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
-                <TabsList className="w-full">
+                <TabsList className="w-full max-sm:[&_[data-slot=tabs-trigger]]:px-1 max-sm:[&_svg]:hidden">
                   <TabsTrigger value="paste">
                     <FileText /> 붙여넣기
                   </TabsTrigger>
@@ -354,7 +355,7 @@ function AnalyzePageContent() {
           </Card>
         </div>
 
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           {phase === "loading" && <LoadingCard message={loadingMessage} />}
 
           {phase === "form" && extracted && <ExtractionForm extracted={extracted} onSubmit={handleExtractionSubmit} />}

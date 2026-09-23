@@ -37,19 +37,23 @@ export const EXTRACT_SYSTEM_PROMPT = `당신은 채용공고 텍스트에서 핵
 - 원문에 없는 정보는 지어내지 말고 빈 문자열("") 또는 빈 배열([])로 둔다.
 - requiredSkills/preferredSkills는 원문에 실제로 언급된 기술·도구·역량만 포함한다.`;
 
-export const COMPARE_SYSTEM_PROMPT = `당신은 채용공고와 지원자 이력서를 비교해 적합도를 분석하는 커리어 코치입니다.
+export const COMPARE_SYSTEM_PROMPT = `당신은 채용공고와 지원자의 이력서·자기소개서를 비교해 적합도를 분석하는 커리어 코치입니다.
 아래 JSON 스키마에 맞는 객체만 출력하세요. 설명, 인사말, 마크다운 코드펜스 없이 순수 JSON만 출력하세요.
 
 {
+  "fitScore": number,
   "matchingSkills": [{ "name": string, "postingEvidence": string, "resumeEvidence": string }],
   "missingSkills": [{ "name": string, "reason": string }],
-  "prepLabels": string[]
+  "prepLabels": string[],
+  "coverLetterReview": { "alignment": string, "suggestions": string[] } | null
 }
 
 규칙:
-- matchingSkills: 공고 요구사항과 이력서에 공통으로 드러나는 기술/경험. postingEvidence/resumeEvidence는 반드시 주어진 입력 텍스트를 인용하거나 요약해서 작성 (지어내지 말 것).
+- fitScore: 0~100 정수. 필수 요건 충족도를 가장 크게, 우대 요건·업무 관련 경험을 그다음으로 반영한다.
+- matchingSkills: 공고 요구사항과 이력서(원문이 있으면 원문 우선)에 공통으로 드러나는 기술/경험. postingEvidence/resumeEvidence는 반드시 주어진 입력 텍스트를 인용하거나 요약해서 작성 (지어내지 말 것).
 - missingSkills: 공고에는 있지만 이력서에서 근거를 찾기 어려운 기술. reason은 왜 부족하다고 판단했는지 공고 내용을 근거로 설명.
-- prepLabels: 부족한 부분을 보완하기 위한 구체적 준비 항목 2~4개 (예: "OO 개념 복습하기").`;
+- prepLabels: 부족한 부분을 보완하기 위한 구체적 준비 항목 2~4개 (예: "OO 개념 복습하기").
+- coverLetterReview: 자기소개서가 주어졌을 때만 작성하고, 없으면 null. alignment는 자기소개서가 이 공고의 요구 역량·주요 업무를 얼마나 어필하는지 2~3문장으로 평가. suggestions는 이 공고에 맞춰 자기소개서를 고칠 구체적 제안 2~4개 (어떤 문단에 어떤 경험을 어떻게 보강할지).`;
 
 export const QUESTIONS_SYSTEM_PROMPT = `당신은 기술 면접관입니다. 주어진 채용공고를 바탕으로 예상 면접 질문 5~6개를 한국어로 만드세요.
 아래 JSON 스키마에 맞는 객체만 출력하세요. 설명, 인사말, 마크다운 코드펜스 없이 순수 JSON만 출력하세요.
@@ -85,7 +89,20 @@ export function buildCompareUserPrompt(posting: JobPosting, resume: ResumeProfil
     `요약: ${resume.summary || "(없음)"}`,
     `보유 기술: ${resume.skills.join(", ") || "(없음)"}`,
     `경력 요약: ${resume.experienceSummary || "(없음)"}`,
+    "",
+    "[이력서 원문]",
+    clip(resume.resumeText) || "(없음)",
+    "",
+    "[자기소개서]",
+    clip(resume.coverLetterText) || "(없음 — coverLetterReview는 null)",
   ].join("\n");
+}
+
+// 이력서·자소서가 아주 길면 앞부분만 — 비용과 (특히 로컬 LLM의) 컨텍스트 한도를 넘지 않게
+const DOC_MAX_CHARS = 6000;
+function clip(text: string | undefined): string {
+  const t = (text ?? "").trim();
+  return t.length > DOC_MAX_CHARS ? `${t.slice(0, DOC_MAX_CHARS)}\n...(이하 생략)` : t;
 }
 
 /** 코드펜스나 잡담이 섞인 응답에서도 JSON을 최대한 복구해서 파싱한다 */

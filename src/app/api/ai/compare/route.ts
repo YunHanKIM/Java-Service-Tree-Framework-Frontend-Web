@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
   try {
     const provider = createAiProvider(access.credentials);
     const result = await provider.compareResume(parsed.data.posting as JobPosting, parsed.data.resume);
+    const hasCoverLetter = parsed.data.resume.coverLetterText.trim().length > 0;
     return NextResponse.json({
+      fitScore: Math.max(0, Math.min(100, Math.round(result.fitScore ?? 0))),
+      // 자소서가 없는데 모델이 리뷰를 지어낸 경우는 버린다
+      coverLetterReview: hasCoverLetter ? result.coverLetterReview : null,
       matchingSkills: result.matchingSkills,
       missingSkills: result.missingSkills,
       prepItems: result.prepLabels.map((label) => ({ id: generatePrepId(), label, done: false })),

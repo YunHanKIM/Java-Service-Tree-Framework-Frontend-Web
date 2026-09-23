@@ -22,10 +22,18 @@ export const missingSkillSchema = z.object({
   reason: z.string(),
 });
 
+export const coverLetterReviewSchema = z.object({
+  alignment: z.string(),
+  suggestions: z.array(z.string()).default([]),
+});
+
 export const analysisResultSchema = z.object({
+  // 범위 밖 값(예: 105, 72.5)은 거부하지 않고 API route에서 0~100 정수로 보정한다
+  fitScore: z.number().default(0),
   matchingSkills: z.array(matchingSkillSchema).default([]),
   missingSkills: z.array(missingSkillSchema).default([]),
   prepLabels: z.array(z.string()).default([]),
+  coverLetterReview: coverLetterReviewSchema.nullable().default(null),
 });
 
 export const questionsSchema = z.object({

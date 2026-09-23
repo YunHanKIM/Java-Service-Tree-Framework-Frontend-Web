@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>면접 준비 · 지원노트</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body data-page="interview">
+  <div class="app-shell">
+    <aside class="app-sidebar d-none d-lg-flex flex-column">
+      <a class="app-sidebar-brand" href="../index.html">
+        <span class="app-sidebar-brand-mark">지</span>
+        지원노트
+      </a>
+      <nav class="flex-grow-1">
+        <div class="nav-section-label">메뉴</div>
+        <a class="nav-item" data-page="dashboard" href="../index.html"><i class="bi bi-house"></i> 대시보드</a>
+        <a class="nav-item" data-page="analyze" href="analyze.html"><i class="bi bi-file-earmark-text"></i> 공고 분석</a>
+        <a class="nav-item" data-page="applications" href="applications.html"><i class="bi bi-kanban"></i> 지원 관리</a>
+        <a class="nav-item" data-page="interview" href="interview.html"><i class="bi bi-chat-square-text"></i> 면접 준비</a>
+      </nav>
+      <div class="app-sidebar-footer">
+        <div class="d-flex align-items-center gap-2 px-2 py-2">
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;font-size:13px;font-weight:700;background:var(--color-accent-soft);color:var(--color-accent);" data-current-user-initial>?</div>
+          <div class="flex-grow-1" style="min-width:0;">
+            <div class="fw-semibold small text-truncate" data-current-user-name>게스트</div>
+            <div class="text-faint" style="font-size:11px;">좋은 기회를 향한 여정</div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-light w-100 mt-1" data-action="logout" data-home-path="login.html">
+          <i class="bi bi-box-arrow-right"></i> 로그아웃
+        </button>
+      </div>
+    </aside>
+
+    <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileSidebarLabel">지원노트</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="닫기"></button>
+      </div>
+      <div class="offcanvas-body p-2 pt-0">
+        <a class="nav-item" data-page="dashboard" href="../index.html"><i class="bi bi-house"></i> 대시보드</a>
+        <a class="nav-item" data-page="analyze" href="analyze.html"><i class="bi bi-file-earmark-text"></i> 공고 분석</a>
+        <a class="nav-item" data-page="applications" href="applications.html"><i class="bi bi-kanban"></i> 지원 관리</a>
+        <a class="nav-item" data-page="interview" href="interview.html"><i class="bi bi-chat-square-text"></i> 면접 준비</a>
+        <hr>
+        <button type="button" class="btn btn-sm btn-light w-100" data-action="logout" data-home-path="login.html">
+          <i class="bi bi-box-arrow-right"></i> 로그아웃
+        </button>
+      </div>
+    </div>
+
+    <div class="app-main">
+      <header class="app-topbar">
+        <button type="button" class="btn btn-sm btn-light d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="메뉴 열기">
+          <i class="bi bi-list"></i>
+        </button>
+        <div class="flex-grow-1">
+          <h1 class="h5 mb-0">면접 준비</h1>
+          <p class="text-muted-2 small mb-0 d-none d-sm-block">예상 질문에 답변을 작성하고 AI 피드백을 받아보세요.</p>
+        </div>
+      </header>
+
+      <main class="app-content">
+        <div class="card-surface p-3 mb-3">
+          <label for="applicationSelect" class="form-label small fw-semibold">준비할 지원 항목</label>
+          <select id="applicationSelect" class="form-select form-select-sm"></select>
+        </div>
+
+        <div id="interviewArea"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/common/config.js"></script>
+  <script src="../assets/js/common/util.js"></script>
+  <script src="../assets/js/common/store.js"></script>
+  <script src="../assets/js/common/seed.js"></script>
+  <script src="../assets/js/common/mock-ai.js"></script>
+  <script src="../assets/js/common/auth.js"></script>
+  <script src="../assets/js/common/nav.js"></script>
+  <script src="../assets/js/common/ajax.js"></script>
+  <script src="../assets/js/pages/interview.js"></script>
+</body>
+</html>

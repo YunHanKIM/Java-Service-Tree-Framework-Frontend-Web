@@ -39,6 +39,7 @@ export const api = {
   compareResume: (posting: JobPosting, resume: ResumeProfile) =>
     postJson<AnalysisResult>("/api/ai/compare", { posting, resume }),
   generateQuestions: (posting: JobPosting) => postJson<{ questions: string[] }>("/api/ai/questions", { posting }),
+  exportToNotion: (posting: JobPosting) => postJson<{ url: string }>("/api/notion/export", { posting }),
   generateFeedback: (question: string, answer: string) =>
     postJson<{ feedback: string }>("/api/ai/feedback", { question, answer }),
 

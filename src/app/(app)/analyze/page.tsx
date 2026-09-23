@@ -64,6 +64,7 @@ function AnalyzePageContent() {
   const [compareError, setCompareError] = useState<string | null>(null);
   const [resume, setResume] = useState<ResumeProfile>(EMPTY_RESUME);
   const [counts, setCounts] = useState<Partial<Record<Stage, number>>>({});
+  const [exportingNotion, setExportingNotion] = useState(false);
 
   useEffect(() => {
     ensureSeedData();
@@ -191,6 +192,28 @@ function AnalyzePageContent() {
     setApplication(app);
     setCounts(applicationsStore.counts());
     toast.success("지원 목록에 저장했어요.");
+  }
+
+  async function handleExportNotion() {
+    if (!posting) return;
+    setExportingNotion(true);
+    try {
+      const { url } = await api.exportToNotion(posting);
+      const updated = postingsStore.update(posting.id, { notionPageUrl: url });
+      if (updated) setPosting(updated);
+      toast.success("Notion 데이터베이스에 저장했어요.", {
+        action: { label: "열기", onClick: () => window.open(url, "_blank", "noopener,noreferrer") },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Notion 저장에 실패했어요.";
+      if (err instanceof ApiError && err.code === "NOTION_NOT_CONFIGURED") {
+        toast.error(message, { action: { label: "설정으로", onClick: () => (window.location.href = "/settings") } });
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setExportingNotion(false);
+    }
   }
 
   function handleTogglePrep(id: string, done: boolean) {
@@ -367,6 +390,8 @@ function AnalyzePageContent() {
                 application={application}
                 onSaveApplication={handleSaveApplication}
                 onTogglePrep={handleTogglePrep}
+                onExportNotion={handleExportNotion}
+                exportingNotion={exportingNotion}
               />
               {comparing && <LoadingCard message="이력서와 비교해 적합도를 분석하고 있어요..." />}
               {compareError && !comparing && (

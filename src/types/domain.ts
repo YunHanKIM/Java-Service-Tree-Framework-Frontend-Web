@@ -50,6 +50,8 @@ export interface JobPosting {
   bookmarked: boolean;
   createdAt: string;
   analysis: AnalysisResult | null;
+  /** Notion에 저장했으면 그 페이지 주소 */
+  notionPageUrl?: string | null;
 }
 
 export interface MatchingSkill {
@@ -115,6 +117,12 @@ export interface ExtractedPosting {
   requiredSkills: string[];
   preferredSkills: string[];
   responsibilities: string[];
+}
+
+export interface NotionSettings {
+  hasToken: boolean;
+  maskedToken: string | null;
+  databaseId: string | null;
 }
 
 export type AiProviderName = "openai" | "anthropic" | "local";

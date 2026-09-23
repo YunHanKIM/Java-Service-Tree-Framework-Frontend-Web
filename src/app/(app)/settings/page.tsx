@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { NotionSettingsCard } from "@/components/settings/notion-settings-card";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -188,7 +189,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <PageHeader title="설정" description="이력서 정보와 AI 연동을 관리하세요." />
+      <PageHeader title="설정" description="이력서·자기소개서, AI 연동, Notion 연동을 관리하세요." />
 
       <Card>
         <CardHeader>
@@ -376,6 +377,8 @@ export default function SettingsPage() {
           </CardFooter>
         </form>
       </Card>
+
+      <NotionSettingsCard />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   ListChecks,
   MapPin,
   MessageSquareText,
+  NotebookPen,
   PenLine,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,11 +48,15 @@ export function AnalysisPanel({
   application,
   onSaveApplication,
   onTogglePrep,
+  onExportNotion,
+  exportingNotion,
 }: {
   posting: JobPosting;
   application: Application | null;
   onSaveApplication: () => void;
   onTogglePrep: (id: string, done: boolean) => void;
+  onExportNotion: () => void;
+  exportingNotion: boolean;
 }) {
   const analysis = posting.analysis;
   const days = daysUntil(posting.deadline);
@@ -107,21 +112,40 @@ export function AnalysisPanel({
             </div>
           </div>
 
-          <div className="mt-4 border-t pt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
             {application ? (
-              <div className="flex items-center gap-2">
+              <>
                 <Badge variant="secondary">
                   <BookmarkPlus className="size-3" /> 지원 현황: {STAGE_LABELS[application.stage]}
                 </Badge>
                 <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/applications" />}>
                   칸반에서 관리
                 </Button>
-              </div>
+              </>
             ) : (
               <Button size="sm" onClick={onSaveApplication}>
                 <BookmarkPlus /> 지원 목록에 저장
               </Button>
             )}
+            {posting.notionPageUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<a href={posting.notionPageUrl} target="_blank" rel="noopener noreferrer" />}
+              >
+                <ExternalLink /> Notion에서 보기
+              </Button>
+            )}
+            <Button
+              variant={posting.notionPageUrl ? "ghost" : "outline"}
+              size="sm"
+              onClick={onExportNotion}
+              disabled={exportingNotion}
+              title={analysis ? undefined : "비교 분석이 끝나면 분석 결과까지 함께 저장돼요"}
+            >
+              <NotebookPen /> {exportingNotion ? "저장 중..." : posting.notionPageUrl ? "Notion에 다시 저장" : "Notion에 저장"}
+            </Button>
           </div>
         </CardContent>
       </Card>

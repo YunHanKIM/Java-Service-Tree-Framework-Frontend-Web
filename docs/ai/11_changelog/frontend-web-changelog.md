@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Notion 연동 · 로컬 LLM · 4가지 공고 입력 · 이력서/자소서 비교 (`feature/notion-local-llm`)
+
+- **로컬 LLM(Ollama)**: 설정에서 provider `local` 선택 — 네이티브 `/api/chat` + structured outputs + `num_ctx`
+  16k. 비전 모델을 지정하면 이미지·스캔 PDF도 로컬 모델이 읽는다. 루프백 주소만 허용.
+- **공고 입력 4종**: 붙여넣기 · 링크(fetch → 헤드리스 Chromium 폴백, JSON-LD 우선) · 이미지(페이지 어디서든
+  Ctrl+V, 드래그, 파일) · PDF(스캔본은 OCR). 네 방식이 `runExtraction()` 하나를 공유한다.
+- **이력서·자기소개서 원문**: 설정에서 PDF/TXT 업로드 또는 붙여넣기 → 비교 분석에 원문 사용, 적합도(0~100)와
+  자기소개서 피드백(공고 맞춤 수정 제안) 추가.
+- **Notion 저장**: 통합 토큰 + DB 링크 등록 → 분석 결과를 DB 페이지로 저장(누락 속성 자동 추가).
+- **codex 리뷰 1차 반영**: IPv4-mapped IPv6 SSRF 우회, DNS rebinding(fetch·브라우저 모두 연결 시점 검사),
+  local 경유 provider 전환 시 키 오귀속, 비전 OCR 시간 예산 부재 — 4건 수정.
+- 검증: 목 Ollama 서버로 extract/compare/vision 요청 형태(`num_ctx`·`format`·이미지·이력서/자소서 원문 포함)
+  확인, Playwright UI E2E(설정 업로드 → 이미지 붙여넣기 → 분석 → 적합도·자소서 피드백), 사람인 실제 공고
+  크롤링, SSRF 7종 차단, 390px 가로 넘침 수정.
+
 ### 한도부 데모 풀 — 방문자가 키 없이 실제 AI를 체험
 
 - 계정별 키 격리(바로 아래 항목) 이후 나온 후속 피드백: 포트폴리오 리뷰어에게 "본인 키를 등록해야

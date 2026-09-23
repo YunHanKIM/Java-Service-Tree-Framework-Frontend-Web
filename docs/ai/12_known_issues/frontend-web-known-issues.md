@@ -31,12 +31,29 @@
 - **세션은 자체 구현이다.** Auth.js 같은 라이브러리 대신 HMAC 서명 쿠키(`src/lib/server/session.ts`)를
   직접 구현했다. `SESSION_SECRET` 환경변수를 설정하지 않으면 개발용 기본값을 쓴다 — 실서비스라면
   반드시 `.env.local`에 별도 시크릿을 설정할 것.
-- **링크 가져오기는 실제로 시도하지만 실패할 수 있다.** 서버가 실제로 URL을 fetch한다
-  (`/api/import-url`, `cheerio`로 본문 추출). 로그인이 필요한 페이지, JavaScript로 렌더링되는 SPA,
-  Cloudflare 등 봇 차단이 걸린 사이트는 실패한다 — 그 경우 사람이 읽을 수 있는 에러 메시지와 함께
-  붙여넣기 탭으로 유도한다(가짜 성공을 보여주지 않는다).
-- **PDF는 실제 텍스트 추출이지만 스캔 이미지는 못 읽는다.** `/api/parse-pdf`가 `pdf-parse`로 실제
-  텍스트를 추출한다. 이미지로만 이루어진 PDF(OCR 필요)는 텍스트가 없어 실패 응답을 준다.
+- **링크 크롤링: fetch → 헤드리스 브라우저 2단계, 그래도 실패할 수 있다.** `src/lib/server/crawl.ts`.
+  일반 fetch가 메뉴·푸터뿐인 껍데기(1500자 미만)를 돌려주면 Playwright Chromium으로 JS까지 실행해 다시
+  읽는다(원티드·사람인 확인). 함정 두 가지: ① Playwright 기본 **headless shell은 사람인에서 응답이 멈춘다**
+  (봇 차단) — `channel: "chromium"`(풀 Chromium new headless)을 먼저 쓰고 실패 시 shell로 폴백. ② 사람인은
+  본문 iframe 옆에 **"다음 공고" iframe**이 같이 붙어 있어 모든 프레임을 합치면 공고가 섞인다 — 가장 긴 자식
+  프레임 하나만 쓴다. 로그인 필요 페이지는 여전히 실패하며, 그때는 이미지 탭(화면 캡처)으로 유도한다.
+  서버리스 배포에는 브라우저가 없으므로 `CRAWLER_BROWSER=off`로 끌 수 있다.
+- **크롤러 SSRF 방어 — 검사와 연결을 분리하지 말 것.** URL을 한 번 `dns.lookup`해서 검사하고 fetch가 다시
+  해석하면 DNS rebinding으로 우회된다(codex 리뷰 지적). 그래서 fetch는 undici `Agent({connect: {lookup:
+  guardedLookup}})`로 **실제 연결 시점의 해석**을 검사하고, 헤드리스 브라우저는 `page.route`에서 모든 요청을
+  그 guarded fetch로 대신 보내 `route.fulfill()`한다 — `route.continue()`로 바꾸면 Chromium이 DNS를 직접
+  해석해 방어가 무력화된다. 서비스 워커·WebSocket은 route를 우회하므로 차단. IPv4-mapped IPv6는 URL
+  파서가 `::ffff:7f00:1`처럼 16진수로 정규화하므로 두 표기 모두 IPv4로 되돌려 검사한다.
+- **로컬 LLM 주소는 루프백만 허용.** 누구나 가입 가능한 앱이라 임의 주소를 받으면 SSRF 발판이 된다.
+  원격 Ollama는 SSH 터널 등으로 localhost에 붙여 쓸 것. 로컬 provider는 데모 풀로 공유되지 않는다.
+- **스캔 PDF·이미지는 OCR로 읽지만 정확도에 한계가 있다.** 텍스트 레이어가 없으면 앞 3페이지만 렌더링해
+  읽는다(페이지당 수 초). tesseract 한글 인식은 로고·특수 글꼴에서 오탈자가 생긴다(예: `ABC테크` →
+  `[&8<테크]`) — 추출 결과는 항상 사용자 확인·수정 폼을 거치므로 치명적이진 않다. 로컬 비전 모델을
+  설정하면 훨씬 정확하다. tesseract 언어 데이터는 첫 실행 때 CDN에서 받아 `.data/tesseract/`에 캐시한다.
+- **Notion 연동은 `Notion-Version: 2022-06-28`에 고정.** 데이터 소스가 여러 개인 DB(2025-09 이후 기능)는
+  이 버전으로 페이지를 만들 수 없다. "다시 저장"은 기존 페이지를 갱신하지 않고 새 페이지를 만든다
+  (사용자가 노션에서 덧붙인 메모를 덮어쓰지 않기 위한 선택). 실제 Notion DB에 대한 쓰기는 사용자 토큰이
+  없어 목(fetch 가로채기)과 실제 API 401 경로로만 검증했다 — 첫 실사용 시 확인 필요.
 
 ## Base UI 관련 함정 (`02_tech_stack` 요약과 함께 볼 것)
 

@@ -14,9 +14,11 @@
 | 폰트 | Pretendard (CDN, 무료) |
 | 데이터 검증 | zod |
 | 인증 | 자체 구현 — bcryptjs 해시 + HMAC 서명 쿠키 세션 (외부 Auth 서비스 없음) |
-| AI 연동 | OpenAI SDK / Anthropic SDK — 사용자가 설정 화면에서 등록한 API 키로 서버가 직접 호출 |
-| 링크 가져오기 | cheerio (서버에서 URL을 fetch해 본문 텍스트 추출) |
-| PDF 텍스트 추출 | pdf-parse (v2, `PDFParse` 클래스 API) |
+| AI 연동 | OpenAI SDK / Anthropic SDK — 사용자가 설정 화면에서 등록한 API 키로 서버가 직접 호출 · 로컬 LLM은 Ollama 네이티브 `/api/chat`(structured outputs + `num_ctx`) |
+| 링크 가져오기 | cheerio(일반 fetch + JSON-LD JobPosting) → 본문이 부족하면 Playwright 헤드리스 Chromium. 모든 요청은 undici `Agent`의 guarded lookup으로 공인 IP만 허용 |
+| 이미지·스캔 PDF 글자 인식 | 로컬 비전 모델(Ollama) 우선, 없으면 tesseract.js(kor+eng) |
+| Notion 연동 | Notion REST API 직접 호출 (`Notion-Version: 2022-06-28`, SDK 미사용) |
+| PDF 텍스트 추출 | pdf-parse (v2, `PDFParse` 클래스 API — 스캔 PDF는 `getScreenshot()`으로 페이지를 렌더링해 OCR) |
 | 데이터 저장 | 도메인 데이터(공고·지원현황·이력서·면접)는 브라우저 `localStorage`, 인증·API 키는 서버 로컬 JSON(`/.data/`, gitignored) — 실제 DB 없음(의도된 단순화, `12_known_issues` 참조) |
 | 빌드 도구 | Next.js 자체 (`next dev` / `next build`) |
 

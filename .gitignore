@@ -9,3 +9,22 @@ Thumbs.db
 
 # Logs
 *.log
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+# env (API 키 등 시크릿 — 절대 커밋 금지)
+.env*
+!.env.example
+
+# 서버 전용 로컬 설정 저장소 (API 키 등) — settings-store.ts가 읽고 쓰는 파일
+/.data/
+
+# vercel
+.vercel

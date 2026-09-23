@@ -102,4 +102,6 @@ export interface AiSettings {
   hasKey: boolean;
   maskedKey: string | null;
   model: string;
+  /** 이 계정의 키를 키 없는 방문자에게 한도 내에서 무료로 공유할지 (포트폴리오 데모용) */
+  shareAsDemoPool: boolean;
 }

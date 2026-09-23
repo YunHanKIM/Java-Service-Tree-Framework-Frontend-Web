@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { resumeStore } from "@/lib/client/store";
 import type { AiProviderName, AiSettings, ResumeProfile } from "@/types/domain";
 
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null);
   const [provider, setProvider] = useState<AiProviderName>("anthropic");
   const [apiKey, setApiKey] = useState("");
+  const [shareAsDemoPool, setShareAsDemoPool] = useState(false);
   const [savingResume, setSavingResume] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
 
@@ -41,6 +43,7 @@ export default function SettingsPage() {
       const data = (await res.json()) as AiSettings;
       setAiSettings(data);
       setProvider(data.provider);
+      setShareAsDemoPool(data.shareAsDemoPool);
     });
   }, []);
 
@@ -64,7 +67,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey: apiKey || undefined }),
+        body: JSON.stringify({ provider, apiKey: apiKey || undefined, shareAsDemoPool }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -129,9 +132,8 @@ export default function SettingsPage() {
           <CardTitle>AI 연동</CardTitle>
           <CardDescription>
             OpenAI 또는 Anthropic API 키를 등록하면 실제 AI가 공고 분석·이력서 비교·면접 질문을 생성합니다. 키는
-            서버에만 저장되고 브라우저로 다시 전송되지 않습니다. <strong>이 계정에만</strong> 연결되는
-            키입니다 — 다른 계정(데모 계정 포함)의 AI 호출에는 쓰이지 않으니, 이 키의 사용량·비용은
-            오직 지금 로그인한 계정으로 실행한 AI 요청에서만 발생합니다.
+            서버에만 저장되고 브라우저로 다시 전송되지 않습니다. 기본적으로 <strong>이 계정에만</strong>
+            연결되는 키입니다 — 다른 계정(데모 계정 포함)의 AI 호출에는 쓰이지 않습니다.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSaveAi}>
@@ -170,6 +172,18 @@ export default function SettingsPage() {
                 — ChatGPT Plus·Claude Pro 구독과는 별개로 발급받는 API 키이며, 사용량만큼 과금됩니다.
               </p>
             </div>
+
+            <label className="flex items-start gap-2.5 rounded-lg border p-3 text-sm">
+              <Checkbox checked={shareAsDemoPool} onCheckedChange={(v) => setShareAsDemoPool(Boolean(v))} className="mt-0.5" />
+              <span>
+                <span className="font-medium">방문자에게 무료 체험으로 공유</span>
+                <span className="block text-xs text-muted-foreground">
+                  포트폴리오를 보는 사람이 키 등록 없이 &quot;데모 계정으로 체험하기&quot;만으로 실제 AI를
+                  써볼 수 있게 됩니다. 하루 총 50회, 방문자(IP)당 하루 10회로 한도가 걸려 있어 비용은
+                  제한됩니다 — 본인 계정(키를 직접 등록한 계정)으로 쓸 때는 이 한도가 적용되지 않습니다.
+                </span>
+              </span>
+            </label>
           </CardContent>
           <CardFooter className="flex items-center gap-3">
             <Button type="submit" disabled={savingAi}>

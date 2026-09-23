@@ -13,6 +13,7 @@ const bodySchema = z.object({
   provider: z.enum(["openai", "anthropic"]),
   apiKey: z.string().optional(),
   model: z.string().optional(),
+  shareAsDemoPool: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/server/session";
-import { getStoredAiSettings } from "@/lib/server/settings-store";
+import { resolveAiAccess } from "@/lib/server/ai-access";
 import { createAiProvider, AiProviderError } from "@/lib/ai";
 import { jobPostingSchema, resumeProfileSchema } from "@/types/schemas";
 import type { JobPosting } from "@/types/domain";
@@ -22,13 +22,14 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
 
-  const settings = getStoredAiSettings(userId);
-  if (!settings.apiKey) {
-    return NextResponse.json({ error: "AI API 키가 설정되지 않았습니다. 설정에서 먼저 등록해주세요.", code: "NO_API_KEY" }, { status: 412 });
+  const access = resolveAiAccess(userId, req);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   }
+  const { provider: providerName, apiKey, model } = access.credentials;
 
   try {
-    const provider = createAiProvider(settings.provider, settings.apiKey, settings.model);
+    const provider = createAiProvider(providerName, apiKey, model);
     const result = await provider.compareResume(parsed.data.posting as JobPosting, parsed.data.resume);
     return NextResponse.json({
       matchingSkills: result.matchingSkills,

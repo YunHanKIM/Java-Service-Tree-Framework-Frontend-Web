@@ -41,6 +41,7 @@
 | provider | `"openai"` \| `"anthropic"` | 선택된 AI 프로바이더 |
 | hasKey | boolean | 키 등록 여부 (원문 키는 응답에 포함 안 됨) |
 | maskedKey | string \| null | `sk-a***...***1234` 형태 마스킹 |
+| shareAsDemoPool | boolean | 켜면 이 키를 키 없는 방문자에게 한도 내(`demo-pool.ts`) 공유 |
 | model | string | 사용 모델 (기본값은 `src/lib/ai/index.ts`의 `DEFAULT_MODEL_BY_PROVIDER`) |
 
 ## ResumeProfile

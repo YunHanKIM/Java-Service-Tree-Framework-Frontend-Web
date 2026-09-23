@@ -38,6 +38,11 @@
   본문 iframe 옆에 **"다음 공고" iframe**이 같이 붙어 있어 모든 프레임을 합치면 공고가 섞인다 — 가장 긴 자식
   프레임 하나만 쓴다. 로그인 필요 페이지는 여전히 실패하며, 그때는 이미지 탭(화면 캡처)으로 유도한다.
   서버리스 배포에는 브라우저가 없으므로 `CRAWLER_BROWSER=off`로 끌 수 있다.
+  실제 Ollama로 돌려보다 추가로 찾은 차단 요인(2026-09-23): ③ 헤드리스 Chromium은 `sec-ch-ua` 클라이언트 힌트에
+  `HeadlessChrome`을 실어 보내는데 사람인은 이 헤더만으로 연결을 끊는다 — 프록시할 때 `sec-ch-ua*`를 빼고 UA를
+  고정한다. ④ 하위 리소스를 한꺼번에 열면 방화벽이 연결을 떨어뜨려(`CONNECT_TIMEOUT`) `domcontentloaded`에
+  도달하지 못한다 — CSS까지 받지 않고, undici `Agent`의 호스트당 연결을 6으로 제한한다. 이 실패들은 전부
+  조용히 fetch 결과(메뉴뿐인 859자)로 떨어지므로, 크롤링 품질은 `method`와 글자 수로 확인할 것.
 - **크롤러 SSRF 방어 — 검사와 연결을 분리하지 말 것.** URL을 한 번 `dns.lookup`해서 검사하고 fetch가 다시
   해석하면 DNS rebinding으로 우회된다(codex 리뷰 지적). 그래서 fetch는 undici `Agent({connect: {lookup:
   guardedLookup}})`로 **실제 연결 시점의 해석**을 검사하고, 헤드리스 브라우저는 `page.route`에서 모든 요청을
@@ -46,6 +51,12 @@
   파서가 `::ffff:7f00:1`처럼 16진수로 정규화하므로 두 표기 모두 IPv4로 되돌려 검사한다.
 - **로컬 LLM 주소는 루프백만 허용.** 누구나 가입 가능한 앱이라 임의 주소를 받으면 SSRF 발판이 된다.
   원격 Ollama는 SSH 터널 등으로 localhost에 붙여 쓸 것. 로컬 provider는 데모 풀로 공유되지 않는다.
+- **빈 공고는 추출 단계에서 막는다.** 메뉴뿐인 페이지를 넘기면 모델은 모든 필드를 빈 값으로 돌려주고, 그대로
+  비교까지 가면 이력서 내용만으로 엉뚱한 "보완할 경험"을 지어낸다(실측). `/api/ai/extract`가 회사·직무·필수
+  기술·업무가 모두 비면 422 `EMPTY_POSTING`으로 멈춘다.
+- **로컬 모델 structured outputs는 optional·nullable을 "생략해도 됨"으로 쓴다.** `fitScore`를 optional로 두자
+  qwen2.5:7b가 실제로 빠뜨렸고, `coverLetterReview`를 nullable로 두자 자소서가 있어도 null을 골랐다. 그래서
+  `fitScore`는 필수(빠지면 검증 실패), 자소서가 있을 때는 `analysisResultWithCoverLetterSchema`(null 불가)를 넘긴다.
 - **스캔 PDF·이미지는 OCR로 읽지만 정확도에 한계가 있다.** 텍스트 레이어가 없으면 앞 3페이지만 렌더링해
   읽는다(페이지당 수 초). tesseract 한글 인식은 로고·특수 글꼴에서 오탈자가 생긴다(예: `ABC테크` →
   `[&8<테크]`) — 추출 결과는 항상 사용자 확인·수정 폼을 거치므로 치명적이진 않다. 로컬 비전 모델을

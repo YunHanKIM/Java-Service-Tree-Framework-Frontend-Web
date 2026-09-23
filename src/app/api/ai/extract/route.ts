@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
   try {
     const provider = createAiProvider(access.credentials);
     const extracted = await provider.extractPosting(parsed.data);
+    // 메뉴·푸터뿐인 페이지를 넘기면 모델은 전부 빈 값으로 돌려준다 — 빈 공고로 비교 분석까지 가면 엉뚱한 결과가
+    // 나오므로 여기서 멈추고 다른 입력 방식을 안내한다
+    const found =
+      extracted.company || extracted.title || extracted.requiredSkills.length > 0 || extracted.responsibilities.length > 0;
+    if (!found) {
+      return NextResponse.json(
+        { error: "입력한 내용에서 공고 정보를 찾지 못했어요. 공고 본문을 붙여넣거나 화면을 캡처해 이미지로 넣어주세요.", code: "EMPTY_POSTING" },
+        { status: 422 }
+      );
+    }
     return NextResponse.json(extracted);
   } catch (err) {
     const message = err instanceof AiProviderError ? err.message : "AI 분석 중 오류가 발생했습니다.";

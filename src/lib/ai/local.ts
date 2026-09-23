@@ -11,7 +11,13 @@ import {
   parseJsonLoose,
   QUESTIONS_SYSTEM_PROMPT,
 } from "./provider";
-import { analysisResultSchema, extractedPostingSchema, feedbackSchema, questionsSchema } from "./schemas";
+import {
+  analysisResultSchema,
+  analysisResultWithCoverLetterSchema,
+  extractedPostingSchema,
+  feedbackSchema,
+  questionsSchema,
+} from "./schemas";
 
 export const LOCAL_DEFAULT_MODEL = "qwen2.5:7b";
 export const LOCAL_DEFAULT_BASE_URL = "http://localhost:11434";
@@ -148,7 +154,8 @@ export function createLocalProvider(baseUrl: string, model: string = LOCAL_DEFAU
       return completeJson(EXTRACT_SYSTEM_PROMPT, text, extractedPostingSchema);
     },
     compareResume(posting: JobPosting, resume: ResumeProfile) {
-      return completeJson(COMPARE_SYSTEM_PROMPT, buildCompareUserPrompt(posting, resume), analysisResultSchema);
+      const schema = resume.coverLetterText?.trim() ? analysisResultWithCoverLetterSchema : analysisResultSchema;
+      return completeJson(COMPARE_SYSTEM_PROMPT, buildCompareUserPrompt(posting, resume), schema);
     },
     async generateQuestions(posting: JobPosting) {
       return (await completeJson(QUESTIONS_SYSTEM_PROMPT, buildPostingSummary(posting), questionsSchema)).questions;

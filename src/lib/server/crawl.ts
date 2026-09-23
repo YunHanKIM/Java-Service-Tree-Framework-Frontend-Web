@@ -5,7 +5,9 @@ import { assertPublicUrl, guardedLookup, UnsafeUrlError } from "./url-guard";
 
 // assertPublicUrl로 검사한 뒤 fetch가 DNS를 다시 해석하면 그 사이 내부 IP로 바뀔 수 있다(DNS rebinding).
 // 실제 소켓 연결 시점의 해석도 같은 검사를 거치도록 커넥터에 guardedLookup을 꽂는다.
-const guardedAgent = new Agent({ connect: { lookup: guardedLookup } });
+// 호스트당 연결 수는 일반 브라우저 수준(6)으로 제한 — 헤드리스 렌더링 때 하위 리소스를 한꺼번에 열면
+// 사람인 방화벽이 연결을 떨어뜨린다(실측: CONNECT_TIMEOUT)
+const guardedAgent = new Agent({ connect: { lookup: guardedLookup }, connections: 6 });
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36";
@@ -139,22 +141,29 @@ async function crawlWithBrowser(url: string): Promise<CrawlResult | null> {
     // 받아 3xx를 그대로 넘기면 브라우저가 따라가면서 다음 요청이 다시 이 핸들러를 거친다.
     await page.route("**/*", async (route) => {
       const req = route.request();
-      if (["image", "media", "font"].includes(req.resourceType())) return route.abort();
+      // 본문 텍스트만 필요하므로 이미지·폰트·CSS는 받지 않는다(요청 수를 줄여 차단·지연도 줄인다)
+      if (["image", "media", "font", "stylesheet"].includes(req.resourceType())) return route.abort();
       try {
         await assertPublicUrl(req.url());
+        // 헤드리스 Chromium은 sec-ch-ua 클라이언트 힌트에 "HeadlessChrome"을 실어 보낸다 — 사람인은 이 헤더만으로
+        // 연결을 끊는다(실측). 클라이언트 힌트는 빼고 UA도 일반 브라우저 값으로 고정한다
+        const headers = Object.fromEntries(
+          Object.entries(req.headers()).filter(([name]) => !name.startsWith("sec-ch-ua"))
+        );
+        headers["user-agent"] = USER_AGENT;
         const res = await undiciFetch(req.url(), {
           method: req.method(),
-          headers: req.headers(),
+          headers,
           body: req.postDataBuffer() ?? undefined,
           dispatcher: guardedAgent,
           redirect: "manual",
           signal: AbortSignal.timeout(15000),
         });
-        const headers = Object.fromEntries(res.headers);
+        const resHeaders = Object.fromEntries(res.headers);
         // undici가 이미 압축을 풀었으므로 원래 인코딩·길이 헤더를 넘기면 브라우저가 한 번 더 풀려다 깨진다
-        delete headers["content-encoding"];
-        delete headers["content-length"];
-        return route.fulfill({ status: res.status, headers, body: Buffer.from(await res.arrayBuffer()) });
+        delete resHeaders["content-encoding"];
+        delete resHeaders["content-length"];
+        return route.fulfill({ status: res.status, headers: resHeaders, body: Buffer.from(await res.arrayBuffer()) });
       } catch {
         return route.abort();
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AlertCircle, FileText, ImageIcon, Lightbulb, Link2, Search, Settings, Sparkles, Upload, X } from "lucide-react";
@@ -43,6 +43,7 @@ function LoadingCard({ message }: { message: string }) {
 
 function AnalyzePageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<Tab>("paste");
   const [pasteText, setPasteText] = useState("");
@@ -207,7 +208,7 @@ function AnalyzePageContent() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Notion 저장에 실패했어요.";
       if (err instanceof ApiError && err.code === "NOTION_NOT_CONFIGURED") {
-        toast.error(message, { action: { label: "설정으로", onClick: () => (window.location.href = "/settings") } });
+        toast.error(message, { action: { label: "설정으로", onClick: () => router.push("/settings") } });
       } else {
         toast.error(message);
       }

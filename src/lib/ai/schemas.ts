@@ -28,8 +28,9 @@ export const coverLetterReviewSchema = z.object({
 });
 
 export const analysisResultSchema = z.object({
-  // 범위 밖 값(예: 105, 72.5)은 거부하지 않고 API route에서 0~100 정수로 보정한다
-  fitScore: z.number().default(0),
+  // 범위 밖 값(예: 105, 72.5)은 거부하지 않고 API route에서 0~100 정수로 보정한다.
+  // 모델이 빠뜨리면 0점으로 위장하지 않고 "점수 없음"으로 둔다
+  fitScore: z.number().optional(),
   matchingSkills: z.array(matchingSkillSchema).default([]),
   missingSkills: z.array(missingSkillSchema).default([]),
   prepLabels: z.array(z.string()).default([]),

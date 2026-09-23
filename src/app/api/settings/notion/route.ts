@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/server/session";
 import { getStoredNotionSettings, saveNotionSettings, toPublicNotionSettings } from "@/lib/server/notion-store";
-import { getDatabaseInfo, NotionError, parseDatabaseId } from "@/lib/server/notion";
+import { NotionError, parseDatabaseId, prepareDatabase } from "@/lib/server/notion";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -15,7 +15,8 @@ const bodySchema = z.object({
   database: z.string().trim().min(1).max(500),
 });
 
-// 저장 전에 실제로 DB를 조회해본다 — 토큰 오타·통합 미연결을 저장 시점에 바로 알려주기 위해
+// 저장 전에 실제로 DB를 조회하고 필요한 속성까지 추가해본다 — 토큰 오타·통합 미연결·수정 권한 부족을
+// 내보내기 시점이 아니라 저장 시점에 바로 알려주기 위해
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: "Notion 통합 토큰을 입력해주세요." }, { status: 400 });
 
   try {
-    const { title } = await getDatabaseInfo(token, databaseId);
+    const { title } = await prepareDatabase(token, databaseId);
     const saved = saveNotionSettings(userId, { token: parsed.data.token, databaseId });
     return NextResponse.json({ ...toPublicNotionSettings(saved), databaseTitle: title });
   } catch (err) {

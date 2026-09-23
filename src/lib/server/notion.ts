@@ -8,6 +8,9 @@ const API = "https://api.notion.com/v1";
 const TEXT_LIMIT = 1900;
 // 페이지 생성 시 children은 최대 100블록
 const MAX_BLOCKS = 100;
+// OCR 잡음이나 조작된 localStorage 데이터로 배열이 비정상적으로 길어도 페이로드·DB 옵션이 폭증하지 않게
+const MAX_SKILLS = 30;
+const MAX_LIST_ITEMS = 20;
 
 export class NotionError extends Error {
   constructor(
@@ -40,6 +43,13 @@ async function notionFetch<T>(token: string, path: string, method: "GET" | "POST
 
   if (res.status === 401) {
     throw new NotionError("Notion 통합 토큰이 올바르지 않아요. 설정에서 다시 확인해주세요.", 401, "NOTION_UNAUTHORIZED");
+  }
+  if (res.status === 403) {
+    throw new NotionError(
+      "통합에 권한이 부족해요. Notion 통합 설정의 기능(Capabilities)에서 콘텐츠 읽기·업데이트·삽입을 모두 켜주세요.",
+      403,
+      "NOTION_FORBIDDEN"
+    );
   }
   if (res.status === 404) {
     throw new NotionError(
@@ -84,13 +94,16 @@ const MANAGED_PROPERTIES = {
 } as const;
 type ManagedName = keyof typeof MANAGED_PROPERTIES;
 
-export async function getDatabaseInfo(token: string, databaseId: string): Promise<{ title: string }> {
+/**
+ * DB를 조회하고 없는 관리 속성을 추가한다. 설정 저장 시에도 이걸 호출해서, 읽기만 되고 수정 권한이 없는
+ * 통합을 내보내기 시점이 아니라 저장 시점에 걸러낸다(페이지 삽입 권한은 실제로 만들어보기 전엔 알 수 없다).
+ */
+export async function prepareDatabase(
+  token: string,
+  databaseId: string
+): Promise<{ title: string; titleProp: string; usable: Set<ManagedName> }> {
   const db = await notionFetch<NotionDatabase>(token, `/databases/${databaseId}`, "GET");
-  return { title: db.title?.map((t) => t.plain_text).join("") || "(제목 없음)" };
-}
-
-async function ensureProperties(token: string, databaseId: string): Promise<{ titleProp: string; usable: Set<ManagedName> }> {
-  const db = await notionFetch<NotionDatabase>(token, `/databases/${databaseId}`, "GET");
+  const title = db.title?.map((t) => t.plain_text).join("") || "(제목 없음)";
   const titleProp = Object.entries(db.properties).find(([, p]) => p.type === "title")?.[0];
   if (!titleProp) throw new NotionError("데이터베이스에 제목 속성이 없어요.", 400, "NOTION_BAD_DATABASE");
 
@@ -109,7 +122,7 @@ async function ensureProperties(token: string, databaseId: string): Promise<{ ti
   if (Object.keys(missing).length > 0) {
     await notionFetch(token, `/databases/${databaseId}`, "PATCH", { properties: missing });
   }
-  return { titleProp, usable };
+  return { title, titleProp, usable };
 }
 
 const text = (content: string) => [{ type: "text", text: { content: content.slice(0, TEXT_LIMIT) } }];
@@ -129,24 +142,24 @@ function buildBlocks(posting: JobPosting): object[] {
     .filter(Boolean)
     .join(" · ");
   if (meta) blocks.push(paragraph(meta));
-  if (posting.requiredSkills.length) blocks.push(bullet(`필수 기술: ${posting.requiredSkills.join(", ")}`));
-  if (posting.preferredSkills.length) blocks.push(bullet(`우대 기술: ${posting.preferredSkills.join(", ")}`));
-  posting.responsibilities.forEach((r) => blocks.push(bullet(`업무: ${r}`)));
+  if (posting.requiredSkills.length) blocks.push(bullet(`필수 기술: ${posting.requiredSkills.slice(0, MAX_SKILLS).join(", ")}`));
+  if (posting.preferredSkills.length) blocks.push(bullet(`우대 기술: ${posting.preferredSkills.slice(0, MAX_SKILLS).join(", ")}`));
+  posting.responsibilities.slice(0, MAX_LIST_ITEMS).forEach((r) => blocks.push(bullet(`업무: ${r}`)));
 
   if (a) {
     if (a.fitScore !== undefined) blocks.push(heading(`적합도 ${a.fitScore} / 100`));
     blocks.push(heading(`일치하는 경험 (${a.matchingSkills.length})`));
-    a.matchingSkills.forEach((s) => blocks.push(bullet(`${s.name} — 공고: ${s.postingEvidence} / 내 이력서: ${s.resumeEvidence}`)));
+    a.matchingSkills.slice(0, MAX_LIST_ITEMS).forEach((s) => blocks.push(bullet(`${s.name} — 공고: ${s.postingEvidence} / 내 이력서: ${s.resumeEvidence}`)));
     blocks.push(heading(`보완할 경험 (${a.missingSkills.length})`));
-    a.missingSkills.forEach((s) => blocks.push(bullet(`${s.name} — ${s.reason}`)));
+    a.missingSkills.slice(0, MAX_LIST_ITEMS).forEach((s) => blocks.push(bullet(`${s.name} — ${s.reason}`)));
     if (a.prepItems.length) {
       blocks.push(heading("추천 준비 항목"));
-      a.prepItems.forEach((p) => blocks.push(todo(p.label, p.done)));
+      a.prepItems.slice(0, MAX_LIST_ITEMS).forEach((p) => blocks.push(todo(p.label, p.done)));
     }
     if (a.coverLetterReview) {
       blocks.push(heading("자기소개서 피드백"));
       blocks.push(paragraph(a.coverLetterReview.alignment));
-      a.coverLetterReview.suggestions.forEach((s) => blocks.push(bullet(s)));
+      a.coverLetterReview.suggestions.slice(0, MAX_LIST_ITEMS).forEach((s) => blocks.push(bullet(s)));
     }
   } else {
     blocks.push(paragraph("아직 이력서 비교 분석 전이에요."));
@@ -164,7 +177,7 @@ const selectName = (s: string) =>
     .slice(0, 100);
 
 export async function exportPostingToNotion(token: string, databaseId: string, posting: JobPosting): Promise<{ url: string }> {
-  const { titleProp, usable } = await ensureProperties(token, databaseId);
+  const { titleProp, usable } = await prepareDatabase(token, databaseId);
   const title = [posting.company, posting.title].filter(Boolean).join(" · ") || "제목 없는 공고";
 
   const properties: Record<string, unknown> = { [titleProp]: { title: text(title) } };
@@ -174,7 +187,7 @@ export async function exportPostingToNotion(token: string, databaseId: string, p
   if (posting.company) set("회사", { rich_text: text(posting.company) });
   if (posting.analysis?.fitScore !== undefined) set("적합도", { number: posting.analysis.fitScore });
   if (posting.deadline && /^\d{4}-\d{2}-\d{2}$/.test(posting.deadline)) set("마감일", { date: { start: posting.deadline } });
-  const skills = [...new Set(posting.requiredSkills.map(selectName).filter(Boolean))];
+  const skills = [...new Set(posting.requiredSkills.map(selectName).filter(Boolean))].slice(0, MAX_SKILLS);
   if (skills.length) set("필수 기술", { multi_select: skills.map((name) => ({ name })) });
   if (posting.originalUrl) set("원문 링크", { url: posting.originalUrl });
   set("분석일", { date: { start: new Date().toISOString().slice(0, 10) } });

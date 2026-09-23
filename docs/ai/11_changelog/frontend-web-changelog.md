@@ -2,7 +2,34 @@
 
 ## [Unreleased]
 
-### 지원노트 v1 — 포트폴리오 구현
+### 지원노트 v2 — Next.js 전면 재구축
+
+- 스택 전환: vanilla JS + jQuery + Bootstrap(빌드 도구 없음) → Next.js(App Router) + TypeScript +
+  Tailwind v4 + shadcn/ui(Base UI 기반). v1 구현은 git 이력에 그대로 남아있다(`feature/nextjs-rewrite`
+  분기 이전 커밋).
+- **실제 AI 연동**: 설정 화면에서 OpenAI 또는 Anthropic API 키를 등록하면 서버(Route Handler)가 실제
+  API를 호출한다(`src/lib/ai/*`, zod로 구조화된 응답 검증). 키가 없으면 mock으로 대체하지 않고
+  `NO_API_KEY`를 그대로 보여주고 설정으로 안내한다.
+- **실제 링크 가져오기**: `/api/import-url`이 서버에서 실제로 URL을 fetch하고 `cheerio`로 본문을
+  추출한다(v1은 항상 실패를 시뮬레이션했음). 실패(로그인 필요·JS 렌더링·봇 차단)는 여전히 발생할 수
+  있고, 그때만 붙여넣기로 안내한다.
+- **실제 PDF 텍스트 추출**: `/api/parse-pdf`가 `pdf-parse`로 실제 텍스트를 추출한다(v1은 파일명만 사용).
+- **이력서 프로필 편집 화면 추가**(`/settings`) — v1에서 누락됐던 부분. AI 프로바이더/API 키 설정도 같은 화면에서.
+- **인증 강화**: bcrypt 해시 + HMAC 서명 쿠키 기반 서버 세션(v1은 localStorage 플래그였음).
+- **레이아웃 리팩터**: `(app)` 라우트 그룹 레이아웃 하나가 사이드바를 전 페이지에 공급 — v1의
+  "페이지마다 사이드바 마크업 복제" 한계를 해소.
+- **칸반 드래그 앤 드롭**: `@dnd-kit` 기반으로 재구현(v1의 HTML5 DnD + DOM 조작 대신 React 상태 기반
+  낙관적 업데이트). 실패 시뮬레이션·롤백은 v1과 동일한 개념 유지.
+- **대시보드 차트**: recharts(shadcn `chart` 래퍼)로 재구현, dataviz 방법론(순서형 단일 계열, sequential
+  블루 램프)은 v1과 동일.
+- `docs/ai/02_tech_stack`, `03_directory_structure`, `04_coding_standards`, `07_review_checklist`,
+  `09_api_contract`, `10_data_model`, `12_known_issues`, `13_deploy_runbook`, `06_page_playbooks/*`(신규
+  `settings.md` 포함) 전면 갱신.
+- 검증: Playwright로 로그인→대시보드→설정→공고분석(NO_API_KEY 경로)→지원관리(드래그/메뉴/검색/다이얼로그)→
+  면접준비→모바일(390px) 전체 흐름 확인, `npm run build`(TS+ESLint) 통과. 스크린샷 오독으로 인한
+  거짓 버그 리포트를 `textContent()` 직접 확인으로 정정한 사례 있음(`12_known_issues` 참조).
+
+### 지원노트 v1 — 포트폴리오 구현 (vanilla JS, 이후 v2로 재구축)
 
 - 프로젝트 범위 확정: "지원노트" — AI 채용공고 분석 · 이력서 비교 · 지원 관리 웹 서비스
 - 핵심 계층: `localStorage` 데이터 계층(`store.js`), 목 AI 엔진(`mock-ai.js`), 데모 시드 데이터(`seed.js`)

@@ -5,6 +5,14 @@
 > API 키를 등록하거나, **내 PC의 로컬 LLM(Ollama)** 을 연결하면 실제 AI가 동작합니다. 분석 결과는
 > **Notion 데이터베이스**로 보낼 수 있습니다.
 
+- **영상
+
+https://github.com/user-attachments/assets/ace214f5-82ca-4c03-9e24-1a296e6bcba6
+
+https://github.com/user-attachments/assets/9fbdb5ca-d990-4787-86f2-7fbcde468054
+
+
+
 ## 서비스 소개
 
 취업을 준비하다 보면 "공고를 저장해두고 → 내 이력서와 비교해보고 → 지원 여부를 결정하고 →

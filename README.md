@@ -1,11 +1,10 @@
 # 지원노트 (JiwonNote)
-
 > AI 채용공고 분석 · 이력서 비교 · 지원 관리를 한 곳에서.
 > Next.js + TypeScript + shadcn/ui로 만든 포트폴리오 프로젝트입니다. 본인의 OpenAI/Anthropic
 > API 키를 등록하거나, **내 PC의 로컬 LLM(Ollama)** 을 연결하면 실제 AI가 동작합니다. 분석 결과는
 > **Notion 데이터베이스**로 보낼 수 있습니다.
 
-- **영상
+- *영상
 
 https://github.com/user-attachments/assets/ace214f5-82ca-4c03-9e24-1a296e6bcba6
 
